@@ -104,6 +104,14 @@ namespace Memory
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+
+		namespace Injection
+		{
+			namespace DLL //Dynamic Link Library
+			{
+				bool LoadLib(HANDLE hProc, str_t dllPath);
+			}
+		}
 	}
 #	endif
 
