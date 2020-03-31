@@ -216,18 +216,18 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	//Detour
 	DWORD  oProtect;
 	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
-#					if defined(ARCH_X86)
+#	if defined(ARCH_X86)
 	mem_t  jmpAddr = (mem_t)(dst - (mem_t)src) - HOOK_MIN_SIZE;
 	*src = JMP;
 	*(mem_t*)((mem_t)src + BYTE_SIZE) = jmpAddr;
-#					elif defined(ARCH_X64)
+#	elif defined(ARCH_X64)
 	mem_t jmpAddr = (mem_t)dst;
 	*(byte_t*)src = MOV_RAX[0];
 	*(byte_t*)((mem_t)src + BYTE_SIZE) = MOV_RAX[1];
 	*(mem_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE) = jmpAddr;
 	*(byte_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t)) = JMP_RAX[0];
 	*(byte_t*)((mem_t)src + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t) + BYTE_SIZE) = JMP_RAX[1];
-#					endif
+#	endif
 	VirtualProtect(src, size, oProtect, &oProtect);
 	return true;
 }
@@ -237,11 +237,11 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 	if (size < HOOK_MIN_SIZE) return 0;
 	void* gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	memcpy(gateway, src, size);
-#					if defined(ARCH_X86)
+#	if defined(ARCH_X86)
 	mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - HOOK_MIN_SIZE;
 	*(byte_t*)((mem_t)gateway + size) = JMP;
 	*(mem_t*)((mem_t)gateway + size + BYTE_SIZE) = jmpBack;
-#					elif defined(ARCH_X64)
+#	elif defined(ARCH_X64)
 	mem_t jmpBack = (mem_t)src + size;
 	//mov rax, jmpBack
 	*(byte_t*)((mem_t)gateway + size) = MOV_RAX[0];
@@ -251,7 +251,7 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 	//jmp rax
 	*(byte_t*)((mem_t)gateway + size + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t)) = JMP_RAX[0];
 	*(byte_t*)((mem_t)gateway + size + BYTE_SIZE + BYTE_SIZE + sizeof(mem_t) + BYTE_SIZE) = JMP_RAX[1];
-#					endif
+#	endif
 	Detour(src, dst, size);
 	return (byte_t*)gateway;
 }
