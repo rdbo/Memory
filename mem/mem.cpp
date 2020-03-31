@@ -3,7 +3,7 @@
 //Windows
 #if defined(WIN)
 //Memory::Ex
-
+#if INCLUDE_EXTERNALS
 pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 {
 	pid_t pid = 0;
@@ -49,7 +49,7 @@ HANDLE Memory::Ex::GetProcessHandle(pid_t pid)
 	return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
 }
 //--------------------------------------------
-mem_t Memory::Ex::GetModuleAddress(str_t moduleName, pid_t pid)
+mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 {
 	mem_t moduleAddr = NULL;
 	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
@@ -96,9 +96,9 @@ BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T si
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 	return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
 }
-
+#endif //INCLUDE_EXTERNALS
 //Memory::In
-
+#if INCLUDE_INTERNALS
 void Memory::In::ZeroMem(void* src, size_t size)
 {
 	memset(src, 0x0, size + 1);
@@ -232,8 +232,8 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 	Detour(src, dst, size);
 	return (byte_t*)gateway;
 }
-
-#endif
+#endif //INCLUDE_INTERNALS
+#endif //Windows
 //============================================
 //============================================
 //============================================

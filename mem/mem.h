@@ -6,6 +6,11 @@
 
 #pragma once
 
+//## Pre-Includes
+
+#define INCLUDE_EXTERNALS 1
+#define INCLUDE_INTERNALS 1
+
 //##Defines
 
 //OS
@@ -88,18 +93,21 @@ const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
 
 namespace Memory
 {
+#	if INCLUDE_EXTERNALS
 	namespace Ex
 	{
 		pid_t GetProcessIdByName(str_t processName);
 		pid_t GetProcessIdByWindow(str_t windowName);
 		pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
 		HANDLE GetProcessHandle(pid_t pid);
-		mem_t GetModuleAddress(str_t moduleName, pid_t pid);
+		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
 	}
+#	endif
 
+#	if INCLUDE_INTERNALS
 	namespace In
 	{
 		void ZeroMem(void* src, size_t size);
@@ -132,6 +140,7 @@ namespace Memory
 			byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
 		}
 	}
+#	endif
 }
 
 #elif defined(MEMORY) && defined(LINUX)
