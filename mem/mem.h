@@ -67,6 +67,26 @@ typedef DWORD pid_t;
 typedef uintptr_t mem_t;
 //Linux
 #elif defined(LINUX)
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <vector>
+#include <string>
+#include <string.h>
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+#define INVALID_PID -1
+#define MAX_FILENAME 256
+typedef off_t mem_t;
+typedef char TCHAR;
 #endif
 
 typedef unsigned char byte_t;
@@ -151,11 +171,47 @@ namespace Memory
 #	endif
 }
 
+//============================================
+//============================================
+//============================================
+
 #elif defined(MEMORY) && defined(LINUX)
 
 namespace Memory
 {
+#	if INCLUDE_EXTERNALS
+	namespace Ex
+	{
+		pid_t GetProcessIdByName(str_t processName);
+		void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+		void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		bool IsProcessRunning(pid_t pid);
+	}
+#	endif //INCLUDE_EXTERNALS
+#	if INCLUDE_INTERNALS
+	namespace In
+	{
+		void ZeroMem(void* src, size_t size);
+		bool IsBadPointer(void* pointer);
+		pid_t GetCurrentProcessID();
+		template <class type_t>
+		type_t Read(mem_t address)
+		{
+			if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+			return *(type_t*)(address);
+		}
+		template <class type_t>
+		bool Write(mem_t address, type_t value)
+		{
+			if (IsBadPointer((void*)address)) return false;
+			*(type_t*)(address) = value;
+			return true;
+		}
 
+		bool ReadBuffer(mem_t address, void* buffer, size_t size);
+		bool WriteBuffer(mem_t address, void* value, size_t size);
+	}
+#	endif
 }
 
 #endif

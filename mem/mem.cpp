@@ -1,7 +1,7 @@
 #include "mem.h"
 
 //Windows
-#if defined(WIN)
+#if defined(WIN) && !defined(LINUX)
 //Memory::Ex
 #if INCLUDE_EXTERNALS
 pid_t Memory::Ex::GetProcessIdByName(str_t processName)
@@ -262,3 +262,114 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 //============================================
 
 //Linux
+#if defined(LINUX) && !defined(WIN)
+
+//Memory::Ex
+#if INCLUDE_EXTERNALS
+pid_t Memory::Ex::GetProcessIdByName(str_t processName)
+{
+	pid_t pid = INVALID_PID;
+	DIR* pdir = opendir("/proc");
+	if (!pdir)
+		return INVALID_PID;
+
+	struct dirent* pdirent;
+	while (pid < 0 && (pdirent = readdir(pdir)))
+	{
+		int id = atoi(pdirent->d_name);
+		if (id > 0)
+		{
+			str_t cmdpath = str_t("/proc/") + pdirent->d_name + "/cmdline";
+			std::ifstream cmdfile(cmdpath.c_str());
+			str_t cmdline;
+			getline(cmdfile, cmdline);
+			size_t pos = cmdline.find('\0');
+			if (!cmdline.empty())
+			{
+				if (pos != str_t::npos)
+					cmdline = cmdline.substr(0, pos);
+				pos = cmdline.rfind('/');
+				if (pos != str_t::npos)
+					cmdline = cmdline.substr(pos + 1);
+				if (processName == cmdline.c_str())
+					pid = id;
+			}
+		}
+	}
+	closedir(pdir);
+	return pid;
+}
+//--------------------------------------------
+void Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+{
+	char file[MAX_FILENAME];
+	sprintf(file, "/proc/%ld/mem", (long)pid);
+	int fd = open(file, O_RDWR);
+	ptrace(PTRACE_ATTACH, pid, 0, 0);
+	waitpid(pid, NULL, 0);
+	pread(fd, buffer, size, address);
+	ptrace(PTRACE_DETACH, pid, 0, 0);
+	close(fd);
+}
+//--------------------------------------------
+void Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+{
+	char file[MAX_FILENAME];
+	sprintf(file, "/proc/%ld/mem", (long)pid);
+	int fd = open(file, O_RDWR);
+	ptrace(PTRACE_ATTACH, pid, 0, 0);
+	waitpid(pid, NULL, 0);
+	pwrite(fd, value, size, address);
+	ptrace(PTRACE_DETACH, pid, 0, 0);
+	close(fd);
+}
+//--------------------------------------------
+bool Memory::Ex::IsProcessRunning(pid_t pid)
+{
+	char dirbuf[MAX_FILENAME];
+	sprintf(dirbuf, "/proc/%ld", (long)pid);
+	struct stat status;
+	stat(dirbuf, &status);
+	return status.st_mode & S_IFDIR != 0;
+}
+#endif //INCLUDE_EXTERNALS
+
+#if INCLUDE_INTERNALS
+//Memory::In
+void Memory::In::ZeroMem(void* src, size_t size)
+{
+	memset(src, 0x0, size + 1);
+}
+//--------------------------------------------
+bool Memory::In::IsBadPointer(void* pointer)
+{
+	int fh = open((const char*)pointer, 0, 0);
+	int e = errno;
+
+	if (fh == -1 && e != EFAULT)
+	{
+		close(fh);
+		return false;
+	}
+
+	return true;
+}
+//--------------------------------------------
+pid_t Memory::In::GetCurrentProcessID()
+{
+	return getpid();
+}
+//--------------------------------------------
+bool Memory::In::ReadBuffer(mem_t address, void* buffer, size_t size)
+{
+	memcpy((void*)buffer, (void*)address, size);
+	return true;
+}
+//--------------------------------------------
+bool Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
+{
+	memcpy((void*)address, (void*)value, size);
+	return true;
+}
+#endif //INCLUDE_INTERNALS
+#endif //Linux
