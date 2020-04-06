@@ -61,7 +61,7 @@ mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 		{
 			do
 			{
-				if (!lstrcmp(modEntry.szModule, moduleName.c_str()))
+				if (!_tcscmp(modEntry.szModule, moduleName.c_str()))
 				{
 					moduleAddr = (mem_t)modEntry.modBaseAddr;
 					break;
