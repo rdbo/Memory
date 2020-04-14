@@ -93,6 +93,7 @@ typedef unsigned char byte_t;
 typedef TCHAR* tstr_t;
 typedef char* cstr_t;
 typedef std::basic_string<TCHAR> str_t;
+typedef std::vector<str_t> vstr_t;
 
 //## Assembly Instructions
 
@@ -121,6 +122,8 @@ namespace Memory
 		pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
 		HANDLE GetProcessHandle(pid_t pid);
 		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
+		vstr_t GetModuleList(pid_t pid);
+		bool IsModuleLoaded(str_t moduleName, vstr_t moduleList);
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);

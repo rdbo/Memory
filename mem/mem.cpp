@@ -73,6 +73,34 @@ mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 	return moduleAddr;
 }
 //--------------------------------------------
+vstr_t Memory::Ex::GetModuleList(pid_t pid)
+{
+	vstr_t modList;
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
+	MODULEENTRY32 entry;
+	entry.dwSize = sizeof(MODULEENTRY32);
+	if (Module32First(hSnap, &entry))
+	{
+		do
+		{
+			modList.push_back(entry.szModule);
+		} while (Module32Next(hSnap, &entry));
+	}
+
+	return modList;
+}
+//--------------------------------------------
+bool Memory::Ex::IsModuleLoaded(str_t moduleName, vstr_t moduleList)
+{
+	for (size_t i = 0; i < moduleList.size(); i++)
+	{
+		if (!_tcscmp(moduleName.c_str(), moduleList.at(i).c_str()))
+			return true;
+	}
+
+	return false;
+}
+//--------------------------------------------
 mem_t Memory::Ex::GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
 {
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
