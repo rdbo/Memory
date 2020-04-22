@@ -64,6 +64,7 @@
 #include <tchar.h>
 #include <Windows.h>
 #include <TlHelp32.h>
+#include <Psapi.h>
 typedef DWORD pid_t;
 typedef uintptr_t mem_t;
 //Linux
@@ -95,6 +96,18 @@ typedef TCHAR* tstr_t;
 typedef char* cstr_t;
 typedef std::basic_string<TCHAR> str_t;
 typedef std::vector<str_t> vstr_t;
+
+#if defined(UCS)
+#define NTDLL_NAME L"ntdll.dll"
+#elif defined(MBCS)
+#define NTDLL_NAME "ntdll.dll"
+#endif
+
+//## Nt
+
+#define NTGETNEXTPROCESS_STR "NtGetNextProcess"
+
+typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
 
 //## Assembly Instructions
 
@@ -128,6 +141,11 @@ namespace Memory
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+
+		namespace Nt
+		{
+			HANDLE GetProcessHandle(str_t processName);
+		}
 
 		namespace Injection
 		{

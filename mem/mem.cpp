@@ -125,6 +125,27 @@ BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T si
 	return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
 }
 
+//Memory::Ex::Nt
+HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return INVALID_HANDLE_VALUE;
+	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NTGETNEXTPROCESS_STR);
+	if (!NtGetNextProcess) return INVALID_HANDLE_VALUE;
+
+	HANDLE hProcess = 0;
+	TCHAR buffer[MAX_PATH * sizeof(TCHAR)];
+	while (NtGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
+	{
+		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer));
+		str_t str = buffer;
+		if (str.find(processName) != str.npos) break;
+	}
+
+	CloseHandle(ntdll);
+	return hProcess;
+}
+
 //Memory::Ex::Injection
 
 //Memory::Ex::Injection::DLL
