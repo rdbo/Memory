@@ -134,16 +134,40 @@ HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName)
 	if (!NtGetNextProcess) return INVALID_HANDLE_VALUE;
 
 	HANDLE hProcess = 0;
-	TCHAR buffer[MAX_PATH * sizeof(TCHAR)];
+	TCHAR buffer[MAX_PATH];
 	while (NtGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
 	{
-		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer));
+		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
 		str_t str = buffer;
 		if (str.find(processName) != str.npos) break;
 	}
 
 	CloseHandle(ntdll);
 	return hProcess;
+}
+//--------------------------------------------
+pid_t Memory::Ex::Nt::GetProcessID(str_t processName)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return 0;
+	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NTGETNEXTPROCESS_STR);
+	if (!NtGetNextProcess) return 0;
+
+	HANDLE hProcess = 0;
+	pid_t processId = 0;
+	TCHAR buffer[MAX_PATH];
+	while (NtGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
+	{
+		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
+		str_t str = buffer;
+		if (str.find(processName) != str.npos)
+		{
+			processId = GetProcessId(hProcess);
+			break;
+		}
+	}
+	CloseHandle(ntdll);
+	return processId;
 }
 
 //Memory::Ex::Injection

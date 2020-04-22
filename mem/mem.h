@@ -145,6 +145,7 @@ namespace Memory
 		namespace Nt
 		{
 			HANDLE GetProcessHandle(str_t processName);
+			pid_t GetProcessID(str_t processName);
 		}
 
 		namespace Injection
