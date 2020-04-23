@@ -15,16 +15,16 @@
 #if defined(ARCH_X86) //x86 Process
 #define CONVENTION __cdecl
 #define HOOK_LENGTH 9
-const mem_t FunctionOffset = 0x168B0;
+#define JUMP_INSTRUCTION_LENGTH 5
 #elif defined(ARCH_X64) //x64 Process
 #define CONVENTION __fastcall
 #define HOOK_LENGTH 13
-const mem_t FunctionOffset = 0x16600;
+#define JUMP_INSTRUCTION_LENGTH 5
 #endif
 
 void CONVENTION Function(int number)
 {
-	std::cout << "Your number: " << number << std::endl;
+	std::cout << "Your number: " << std::dec << number << std::endl;
 }
 
 typedef void(CONVENTION* Function_t)(int number);
@@ -33,9 +33,9 @@ Function_t oFunction;
 void CONVENTION hkFunction(int number)
 {
 	std::cout << "Hooked!" << std::endl;
-	std::cout << "Old number: " << number << std::endl;
+	std::cout << "Old number: " << std::dec << number << std::endl;
 	number = NEW_VALUE;
-	std::cout << "New number: " << number << std::endl;
+	std::cout << "New number: " << std::dec << number << std::endl;
 	return oFunction(number);
 }
 
@@ -100,7 +100,11 @@ int main()
 	std::cout << "Function Address: " << Function << std::endl;
 	std::cout << "Press ENTER to Hook Function...";
 	getchar();
-	mem_t FunctionAddress = Memory::In::GetModuleAddress(PROCESS_NAME) + FunctionOffset;
+	mem_t FunctionOffset = 0;
+	memcpy(&FunctionOffset, (void*)((mem_t)Function + 1), sizeof(DWORD)); //Reading as DWORD, as it is a short jump
+	mem_t FunctionAddress = ((mem_t)Function + JUMP_INSTRUCTION_LENGTH) + FunctionOffset;
+	std::cout << "FunctionOffset: " << std::uppercase << std::hex << FunctionOffset << std::endl;
+	std::cout << "FunctionAddress: " << std::uppercase << std::hex << FunctionAddress << std::endl;
 	oFunction = (Function_t)Memory::In::Hook::TrampolineHook((byte_t*)FunctionAddress, (byte_t*)hkFunction, HOOK_LENGTH);
 	Function(50);
 #	endif
