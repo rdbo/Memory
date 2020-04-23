@@ -44,6 +44,11 @@ pid_t Memory::Ex::GetProcessIdByWindow(str_t windowClass, str_t windowName)
 	return pid;
 }
 //--------------------------------------------
+pid_t GetProcessIdByHandle(HANDLE hProcess)
+{
+	return GetProcessId(hProcess);
+}
+//--------------------------------------------
 HANDLE Memory::Ex::GetProcessHandle(pid_t pid)
 {
 	return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);

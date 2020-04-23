@@ -134,6 +134,7 @@ namespace Memory
 		pid_t GetProcessIdByName(str_t processName);
 		pid_t GetProcessIdByWindow(str_t windowName);
 		pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
+		pid_t GetProcessIdByHandle(HANDLE hProcess);
 		HANDLE GetProcessHandle(pid_t pid);
 		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
 		vstr_t GetModuleList(pid_t pid);
