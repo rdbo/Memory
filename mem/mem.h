@@ -168,15 +168,12 @@ namespace Memory
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
-			if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
 			return *(type_t*)(address);
 		}
 		template <class type_t>
-		bool Write(mem_t address, type_t value)
+		void Write(mem_t address, type_t value)
 		{
-			if (IsBadPointer((void*)address)) return false;
 			*(type_t*)(address) = value;
-			return true;
 		}
 		HANDLE GetCurrentProcessHandle();
 		mem_t GetModuleAddress(str_t moduleName);
