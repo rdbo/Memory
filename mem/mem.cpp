@@ -229,6 +229,24 @@ HANDLE Memory::In::GetCurrentProcessHandle()
 	return GetCurrentProcess();
 }
 //--------------------------------------------
+HWND g_hWnd = NULL;
+BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam)
+{
+	pid_t wndPid;
+	GetWindowThreadProcessId(hWnd, &wndPid);
+	if (wndPid != GetCurrentProcessId()) return TRUE;
+
+	g_hWnd = hWnd;
+	return FALSE;
+}
+
+HWND Memory::In::GetCurrentWindowHandle()
+{
+	g_hWnd = NULL;
+	EnumWindows(EnumWindowsCallback, NULL);
+	return g_hWnd;
+}
+//--------------------------------------------
 mem_t Memory::In::GetModuleAddress(str_t moduleName)
 {
 	return (mem_t)GetModuleHandle(moduleName.c_str());

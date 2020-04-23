@@ -176,6 +176,7 @@ namespace Memory
 			*(type_t*)(address) = value;
 		}
 		HANDLE GetCurrentProcessHandle();
+		HWND GetCurrentWindowHandle();
 		mem_t GetModuleAddress(str_t moduleName);
 		mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
 		bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
