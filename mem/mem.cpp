@@ -49,9 +49,9 @@ pid_t Memory::Ex::GetProcessIdByHandle(HANDLE hProcess)
 	return GetProcessId(hProcess);
 }
 //--------------------------------------------
-HANDLE Memory::Ex::GetProcessHandle(pid_t pid)
+HANDLE Memory::Ex::GetProcessHandle(pid_t pid, DWORD dwAccess)
 {
-	return OpenProcess(PROCESS_ALL_ACCESS, NULL, pid);
+	return OpenProcess(dwAccess, NULL, pid);
 }
 //--------------------------------------------
 mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)

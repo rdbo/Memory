@@ -15,7 +15,7 @@
 #if defined(ARCH_X86) //x86 Process
 #define CONVENTION __cdecl
 #define HOOK_LENGTH 9
-const mem_t FunctionOffset = 0x16890;
+const mem_t FunctionOffset = 0x168B0;
 #elif defined(ARCH_X64) //x64 Process
 #define CONVENTION __fastcall
 #define HOOK_LENGTH 13
