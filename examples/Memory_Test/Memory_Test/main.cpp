@@ -19,7 +19,7 @@ const mem_t FunctionOffset = 0x168B0;
 #elif defined(ARCH_X64) //x64 Process
 #define CONVENTION __fastcall
 #define HOOK_LENGTH 13
-const mem_t FunctionOffset = 0x165D0;
+const mem_t FunctionOffset = 0x16600;
 #endif
 
 void CONVENTION Function(int number)
