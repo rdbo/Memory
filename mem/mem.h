@@ -5,6 +5,9 @@
 //1. There can be duplicated/identical functions declared due to cross-platforming between Windows and Linux, and for organization.
 //2. Make sure mem.h and mem.cpp (or mem.lib) are both updated to avoid any problems
 
+//Usage notes
+//1. The pattern scan default format is 'x' for known byte and '?' for unknown byte.
+
 #pragma once
 
 //## Pre-Includes
@@ -49,6 +52,8 @@
 #elif defined(ARCH_X64)
 #define HOOK_MIN_SIZE 12
 #endif
+
+#define UNKNOWN_BYTE '?'
 
 //## Includes / types
 
@@ -199,6 +204,15 @@ namespace Memory
 		void ZeroMem(void* src, size_t size);
 		bool IsBadPointer(void* pointer);
 		pid_t GetCurrentProcessID();
+		HANDLE GetCurrentProcessHandle();
+		HWND GetCurrentWindowHandle();
+		mem_t GetModuleAddress(str_t moduleName);
+		mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
+		bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
+		bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
+		MODULEINFO GetModuleInfo(str_t moduleName);
+		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);;
+		mem_t PatternScanModule(str_t moduleName, byte_t* pattern, char* mask);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
@@ -209,12 +223,6 @@ namespace Memory
 		{
 			*(type_t*)(address) = value;
 		}
-		HANDLE GetCurrentProcessHandle();
-		HWND GetCurrentWindowHandle();
-		mem_t GetModuleAddress(str_t moduleName);
-		mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
-		bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
-		bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
 
 		namespace Hook
 		{

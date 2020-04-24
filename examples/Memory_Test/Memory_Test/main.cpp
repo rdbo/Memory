@@ -98,6 +98,17 @@ int main()
 	std::cout << "Handle: " << Memory::In::GetCurrentProcessHandle() << std::endl;
 	std::cout << "Window Handle: " << Memory::In::GetCurrentWindowHandle() << std::endl;
 
+	byte_t* pattern = (byte_t*)"\x61\x62\x63\x64\x65\x66\x67\x68\x69\x70\x71\x72\x73\x74\x75";
+	const char mask[] = "xxxxxxxxxx";
+	mem_t scanAddr = Memory::In::PatternScanModule(PROCESS_NAME, (byte_t*)pattern, (char*)mask);
+	std::cout << "Pattern Variable address: " << std::hex << (mem_t)(void*)pattern << std::endl;
+	std::cout << "Scan output: " << std::hex << scanAddr << std::endl;
+
+	MODULEINFO modInfo = { 0 };
+	modInfo = Memory::In::GetModuleInfo(PROCESS_NAME);
+	scanAddr = Memory::In::PatternScan((mem_t)modInfo.lpBaseOfDll, (mem_t)modInfo.SizeOfImage, pattern, (char*)mask);
+	std::cout << "Scan output: " << std::hex << scanAddr << std::endl;
+
 	//Reading / Writing memory
 	int ibuffer;
 	Memory::In::ReadBuffer((mem_t)&targetVariable, &ibuffer, sizeof(ibuffer));

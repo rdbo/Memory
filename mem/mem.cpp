@@ -323,6 +323,49 @@ bool Memory::In::ReadBuffer(mem_t address, void* buffer, SIZE_T size)
 	WriteBuffer((mem_t)buffer, (void*)address, size);
 	return true;
 }
+//--------------------------------------------
+MODULEINFO Memory::In::GetModuleInfo(str_t moduleName)
+{
+	MODULEINFO modInfo = { 0 };
+	HMODULE hMod = GetModuleHandle(moduleName.c_str());
+	if (!hMod) return modInfo;
+	GetModuleInformation(GetCurrentProcess(), hMod, &modInfo, sizeof(modInfo));
+	return modInfo;
+}
+//--------------------------------------------
+mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask)
+{
+	size_t patternLength = strlen(mask);
+	size_t scanSize = endAddr - baseAddr;
+	for (size_t i = 0; i < scanSize; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < patternLength; j++)
+		{
+			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
+		}
+
+		if (found) return baseAddr + i;
+	}
+}
+//--------------------------------------------
+mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, char* mask)
+{
+	MODULEINFO modInfo = GetModuleInfo(moduleName);
+	size_t patternLength = strlen(mask);
+	mem_t baseAddr = (mem_t)modInfo.lpBaseOfDll;
+	size_t scanSize = (size_t)modInfo.SizeOfImage;
+	for (size_t i = 0; i < scanSize; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < patternLength; j++)
+		{
+			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
+		}
+
+		if (found) return baseAddr + i;
+	}
+}
 
 //Memory::In::Hook
 
