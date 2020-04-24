@@ -57,6 +57,13 @@ pid_t Memory::Ex::GetProcessIdByWindow(str_t windowClass, str_t windowName)
 	return pid;
 }
 //--------------------------------------------
+pid_t Memory::Ex::GetProcessIdByWindow(HWND hWnd)
+{
+	pid_t pid = 0;
+	GetWindowThreadProcessId(hWnd, &pid);
+	return pid;
+}
+//--------------------------------------------
 pid_t Memory::Ex::GetProcessIdByHandle(HANDLE hProcess)
 {
 	return GetProcessId(hProcess);
@@ -248,7 +255,7 @@ bool Memory::Ex::Injection::DLL::LoadLib(HANDLE hProc, str_t dllPath)
 #if INCLUDE_INTERNALS
 void Memory::In::ZeroMem(void* src, size_t size)
 {
-	memset(src, 0x0, size + 1);
+	memset(src, 0x0, size);
 }
 //--------------------------------------------
 bool Memory::In::IsBadPointer(void* pointer)

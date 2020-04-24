@@ -164,6 +164,7 @@ namespace Memory
 		pid_t GetProcessIdByName(str_t processName);
 		pid_t GetProcessIdByWindow(str_t windowName);
 		pid_t GetProcessIdByWindow(str_t windowClass, str_t windowName);
+		pid_t GetProcessIdByWindow(HWND hWnd);
 		pid_t GetProcessIdByHandle(HANDLE hProcess);
 		HANDLE GetProcessHandle(pid_t pid, DWORD dwAccess = PROCESS_ALL_ACCESS);
 		HWND GetWindowHandle(pid_t pid);
