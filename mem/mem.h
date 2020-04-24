@@ -3,7 +3,7 @@
 
 //Notes
 //1. There can be duplicated/identical functions declared due to cross-platforming between Windows and Linux, and for organization.
-//2. Make sure mem.h and mem.cpp are both updated to avoid any problems
+//2. Make sure mem.h and mem.cpp (or mem.lib) are both updated to avoid any problems
 
 #pragma once
 
