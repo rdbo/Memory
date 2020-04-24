@@ -194,6 +194,32 @@ pid_t Memory::Ex::Nt::GetProcessID(str_t processName)
 	CloseHandle(ntdll);
 	return processId;
 }
+//--------------------------------------------
+HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return INVALID_HANDLE_VALUE;
+	NtOpenProcess_t NtOpenProcess = (NtOpenProcess_t)GetProcAddress(ntdll, NTOPENPROCESS_STR);
+	if (!NtOpenProcess) return INVALID_HANDLE_VALUE;
+
+	HANDLE hProcess = 0;
+	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
+	CLIENT_ID clId = {};
+	clId.UniqueProcess = (HANDLE)pid;
+	NtOpenProcess(&hProcess, PROCESS_ALL_ACCESS, &objAttr, &clId);
+	return hProcess;
+}
+//--------------------------------------------
+bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return false;
+	NtClose_t NtClose = (NtClose_t)GetProcAddress(ntdll, NTCLOSE_STR);
+	if (!NtClose) return false;
+
+	NtClose(hProcess);
+	return true;
+}
 
 //Memory::Ex::Injection
 

@@ -58,8 +58,10 @@ int main()
 	pid_t ntHandlePid = Memory::Ex::GetProcessIdByHandle(ntHandle);
 	HANDLE hProc = Memory::Ex::GetProcessHandle(pid);
 	HWND window_handle = Memory::Ex::GetWindowHandle(pid);
+	HANDLE ntOpenHandle = Memory::Ex::Nt::OpenProcessHandle(ntpid);
 
 	std::cout << "NtHandle: " << ntHandle << std::endl;
+	std::cout << "NtOpenHandle: " << ntOpenHandle << std::endl;
 	std::cout << "PID: " << pid << std::endl;
 	std::cout << "Window PID: " << window_pid << std::endl;
 	std::cout << "Window Handle: " << window_handle << std::endl;
@@ -69,6 +71,13 @@ int main()
 
 	//Reading / Writing Memory
 	int buffer;
+	Memory::Ex::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(500), sizeof(buffer));
+	std::cout << "Buffer (NtOpenHandle): " << buffer << std::endl;
+
+	Memory::Ex::Nt::CloseProcessHandle(ntOpenHandle);
+	Memory::Ex::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(10), sizeof(buffer));
+	std::cout << "Buffer (NtOpenHandle closed): " << buffer << std::endl;
+
 	Memory::Ex::ReadBuffer(hProc, (mem_t)&targetVariable, &buffer, sizeof(buffer));
 	std::cout << "Buffer: " << buffer << std::endl;
 

@@ -106,8 +106,38 @@ typedef std::vector<str_t> vstr_t;
 //## Nt
 
 #define NTGETNEXTPROCESS_STR "NtGetNextProcess"
+#define NTOPENPROCESS_STR "NtOpenProcess"
+#define NTCLOSE_STR "NtClose"
 
+//## Nt Definitions
+typedef struct _UNICODE_STRING
+{
+	USHORT Length;
+	USHORT MaximumLength;
+	PWSTR Buffer;
+} UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING;
+
+typedef struct _OBJECT_ATTRIBUTES
+{
+	ULONG Length;
+	HANDLE RootDirectory;
+	PUNICODE_STRING ObjectName;
+	ULONG Attributes;
+	PVOID SecurityDescriptor;        // SECURITY_DESCRIPTOR
+	PVOID SecurityQualityOfService;  // SECURITY_QUALITY_OF_SERVICE
+} OBJECT_ATTRIBUTES;
+typedef OBJECT_ATTRIBUTES* POBJECT_ATTRIBUTES;
+
+typedef struct _CLIENT_ID
+{
+	HANDLE UniqueProcess;
+	HANDLE UniqueThread;
+} CLIENT_ID, *PCLIENT_ID;
+
+//## Nt Functions
 typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
+typedef NTSTATUS(NTAPI* NtOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
+typedef NTSTATUS(NTAPI* NtClose_t)(HANDLE Handle);
 
 //## Assembly Instructions
 
@@ -148,6 +178,8 @@ namespace Memory
 		{
 			HANDLE GetProcessHandle(str_t processName);
 			pid_t GetProcessID(str_t processName);
+			HANDLE OpenProcessHandle(pid_t pid);
+			bool CloseProcessHandle(HANDLE hProcess);
 		}
 
 		namespace Injection
