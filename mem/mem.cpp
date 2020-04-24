@@ -2,6 +2,19 @@
 
 //Windows
 #if defined(WIN) && !defined(LINUX)
+//Global Variables
+HWND g_hWnd = NULL;
+//Helper Functions
+BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam)
+{
+	pid_t wndPid;
+	GetWindowThreadProcessId(hWnd, &wndPid);
+	if (wndPid != (pid_t)lParam) return TRUE;
+
+	g_hWnd = hWnd;
+	return FALSE;
+}
+
 //Memory::Ex
 #if INCLUDE_EXTERNALS
 pid_t Memory::Ex::GetProcessIdByName(str_t processName)
@@ -52,6 +65,13 @@ pid_t Memory::Ex::GetProcessIdByHandle(HANDLE hProcess)
 HANDLE Memory::Ex::GetProcessHandle(pid_t pid, DWORD dwAccess)
 {
 	return OpenProcess(dwAccess, NULL, pid);
+}
+//--------------------------------------------
+HWND Memory::Ex::GetWindowHandle(pid_t pid)
+{
+	g_hWnd = NULL;
+	EnumWindows(EnumWindowsCallback, pid);
+	return g_hWnd;
 }
 //--------------------------------------------
 mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
@@ -229,21 +249,10 @@ HANDLE Memory::In::GetCurrentProcessHandle()
 	return GetCurrentProcess();
 }
 //--------------------------------------------
-HWND g_hWnd = NULL;
-BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam)
-{
-	pid_t wndPid;
-	GetWindowThreadProcessId(hWnd, &wndPid);
-	if (wndPid != GetCurrentProcessId()) return TRUE;
-
-	g_hWnd = hWnd;
-	return FALSE;
-}
-
 HWND Memory::In::GetCurrentWindowHandle()
 {
 	g_hWnd = NULL;
-	EnumWindows(EnumWindowsCallback, NULL);
+	EnumWindows(EnumWindowsCallback, GetCurrentProcessID());
 	return g_hWnd;
 }
 //--------------------------------------------

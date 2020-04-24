@@ -57,10 +57,12 @@ int main()
 	pid_t ntpid = Memory::Ex::Nt::GetProcessID(PROCESS_NAME);
 	pid_t ntHandlePid = Memory::Ex::GetProcessIdByHandle(ntHandle);
 	HANDLE hProc = Memory::Ex::GetProcessHandle(pid);
+	HWND window_handle = Memory::Ex::GetWindowHandle(pid);
 
 	std::cout << "NtHandle: " << ntHandle << std::endl;
 	std::cout << "PID: " << pid << std::endl;
 	std::cout << "Window PID: " << window_pid << std::endl;
+	std::cout << "Window Handle: " << window_handle << std::endl;
 	std::cout << "Nt PID: " << ntpid << std::endl;
 	std::cout << "Nt Handle PID: " << ntHandlePid << std::endl;
 	std::cout << "Handle: " << hProc << std::endl;
@@ -85,6 +87,7 @@ int main()
 	std::cout << "Internal" << std::endl;
 	std::cout << "PID: " << Memory::In::GetCurrentProcessID() << std::endl;
 	std::cout << "Handle: " << Memory::In::GetCurrentProcessHandle() << std::endl;
+	std::cout << "Window Handle: " << Memory::In::GetCurrentWindowHandle() << std::endl;
 
 	//Reading / Writing memory
 	int ibuffer;
