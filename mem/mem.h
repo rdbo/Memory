@@ -178,7 +178,7 @@ namespace Memory
 		{
 			HANDLE GetProcessHandle(str_t processName);
 			pid_t GetProcessID(str_t processName);
-			HANDLE OpenProcessHandle(pid_t pid);
+			HANDLE OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess = PROCESS_ALL_ACCESS);
 			bool CloseProcessHandle(HANDLE hProcess);
 		}
 

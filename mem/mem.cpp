@@ -195,7 +195,7 @@ pid_t Memory::Ex::Nt::GetProcessID(str_t processName)
 	return processId;
 }
 //--------------------------------------------
-HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid)
+HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
@@ -206,7 +206,7 @@ HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid)
 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
 	CLIENT_ID clId = {};
 	clId.UniqueProcess = (HANDLE)pid;
-	NtOpenProcess(&hProcess, PROCESS_ALL_ACCESS, &objAttr, &clId);
+	NtOpenProcess(&hProcess, dwAccess, &objAttr, &clId);
 	return hProcess;
 }
 //--------------------------------------------
