@@ -108,7 +108,7 @@ typedef std::vector<str_t> vstr_t;
 #define NTDLL_NAME "ntdll.dll"
 #endif
 
-//## Nt
+//## Nt / Zw
 
 #define NTGETNEXTPROCESS_STR "NtGetNextProcess"
 #define NTOPENPROCESS_STR "NtOpenProcess"
@@ -116,7 +116,13 @@ typedef std::vector<str_t> vstr_t;
 #define NTREADVIRTUALMEMORY_STR "NtReadVirtualMemory"
 #define NTWRITEVIRTUALMEMORY_STR "NtWriteVirtualMemory"
 
-//## Nt Definitions
+#define ZWGETNEXTPROCESS_STR "ZwGetNextProcess"
+#define ZWOPENPROCESS_STR "ZwOpenProcess"
+#define ZWCLOSE_STR "ZwClose"
+#define ZWREADVIRTUALMEMORY_STR "ZwReadVirtualMemory"
+#define ZWWRITEVIRTUALMEMORY_STR "ZwWriteVirtualMemory"
+
+//## Nt / Zw Definitions
 typedef struct _UNICODE_STRING
 {
 	USHORT Length;
@@ -141,12 +147,18 @@ typedef struct _CLIENT_ID
 	HANDLE UniqueThread;
 } CLIENT_ID, *PCLIENT_ID;
 
-//## Nt Functions
+//## Nt / Zw Functions
 typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
 typedef NTSTATUS(NTAPI* NtOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
 typedef NTSTATUS(NTAPI* NtClose_t)(HANDLE Handle);
 typedef NTSTATUS(NTAPI* NtReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
 typedef NTSTATUS(NTAPI* NtWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
+
+typedef NTSTATUS(NTAPI* ZwGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
+typedef NTSTATUS(NTAPI* ZwOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
+typedef NTSTATUS(NTAPI* ZwClose_t)(HANDLE Handle);
+typedef NTSTATUS(NTAPI* ZwReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
+typedef NTSTATUS(NTAPI* ZwWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
 
 //## Assembly Instructions
 
@@ -185,6 +197,16 @@ namespace Memory
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
 
 		namespace Nt
+		{
+			HANDLE GetProcessHandle(str_t processName, ACCESS_MASK dwAccess = MAXIMUM_ALLOWED);
+			pid_t GetProcessID(str_t processName);
+			HANDLE OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess = PROCESS_ALL_ACCESS);
+			bool CloseProcessHandle(HANDLE hProcess);
+			void WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size);
+			void ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size);
+		}
+
+		namespace Zw
 		{
 			HANDLE GetProcessHandle(str_t processName, ACCESS_MASK dwAccess = MAXIMUM_ALLOWED);
 			pid_t GetProcessID(str_t processName);

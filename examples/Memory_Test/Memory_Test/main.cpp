@@ -59,6 +59,10 @@ int main()
 	HANDLE hProc = Memory::Ex::GetProcessHandle(pid);
 	HWND window_handle = Memory::Ex::GetWindowHandle(pid);
 	HANDLE ntOpenHandle = Memory::Ex::Nt::OpenProcessHandle(ntpid);
+	HANDLE zwHandle = Memory::Ex::Zw::GetProcessHandle(PROCESS_NAME);
+	pid_t zwpid = Memory::Ex::Zw::GetProcessID(PROCESS_NAME);
+	HANDLE zwOpenHandle = Memory::Ex::Zw::OpenProcessHandle(zwpid);
+	pid_t zwHandlePid = Memory::Ex::GetProcessIdByHandle(zwHandle);
 
 	std::cout << "NtHandle: " << ntHandle << std::endl;
 	std::cout << "NtOpenHandle: " << ntOpenHandle << std::endl;
@@ -68,11 +72,28 @@ int main()
 	std::cout << "Nt PID: " << ntpid << std::endl;
 	std::cout << "Nt Handle PID: " << ntHandlePid << std::endl;
 	std::cout << "Handle: " << hProc << std::endl;
+	std::cout << "Zw PID: " << zwpid << std::endl;
+	std::cout << "Zw Handle PID: " << zwHandlePid << std::endl;
+	std::cout << "Zw Handle: " << zwHandle << std::endl;
+	std::cout << "ZwOpenHandle: " << zwOpenHandle << std::endl;
 
 	//Reading / Writing Memory
 	int buffer;
-	Memory::Ex::Nt::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(500), sizeof(buffer));
 	int read_buffer;
+
+	Memory::Ex::Zw::WriteBuffer(zwOpenHandle, (mem_t)&buffer, new int(NEW_VALUE*2), sizeof(buffer));
+	std::cout << "Buffer (ZwOpenHandle): " << buffer << std::endl;
+	Memory::Ex::Zw::WriteBuffer(zwHandle, (mem_t)&buffer, new int(NEW_VALUE / 2), sizeof(buffer));
+	Memory::Ex::Zw::ReadBuffer(zwHandle, (mem_t)&buffer, &read_buffer, sizeof(read_buffer));
+	std::cout << "Buffer (ZwHandle): " << read_buffer << std::endl;
+	buffer = 0;
+	read_buffer = 0;
+
+	Memory::Ex::Zw::CloseProcessHandle(zwOpenHandle);
+	Memory::Ex::Zw::WriteBuffer(zwOpenHandle, (mem_t)&buffer, new int(NEW_VALUE * 2), sizeof(buffer));
+	std::cout << "Buffer (ZwOpenHandle closed): " << buffer << std::endl;
+
+	Memory::Ex::Nt::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(500), sizeof(buffer));
 	Memory::Ex::Nt::ReadBuffer(ntOpenHandle, (mem_t)&buffer, &read_buffer, sizeof(read_buffer));
 	std::cout << "Buffer (NtOpenHandle): " << read_buffer << std::endl;
 

@@ -214,6 +214,7 @@ HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
 	CLIENT_ID clId = {};
 	clId.UniqueProcess = (HANDLE)pid;
 	NtOpenProcess(&hProcess, dwAccess, &objAttr, &clId);
+	CloseHandle(ntdll);
 	return hProcess;
 }
 //--------------------------------------------
@@ -225,6 +226,7 @@ bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
 	if (!NtClose) return false;
 
 	NtClose(hProcess);
+	CloseHandle(ntdll);
 	return true;
 }
 //--------------------------------------------
@@ -236,6 +238,7 @@ void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const void* buf
 	if (!NtWriteVirtualMemory) return;
 
 	NtWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
+	CloseHandle(ntdll);
 }
 //--------------------------------------------
 void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size)
@@ -246,6 +249,102 @@ void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, si
 	if (!NtReadVirtualMemory) return;
 
 	NtReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
+	CloseHandle(ntdll);
+}
+
+//Memory::Ex::Zw
+HANDLE Memory::Ex::Zw::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return INVALID_HANDLE_VALUE;
+	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZWGETNEXTPROCESS_STR);
+	if (!ZwGetNextProcess) return INVALID_HANDLE_VALUE;
+
+	HANDLE hProcess = 0;
+	TCHAR buffer[MAX_PATH];
+	while (ZwGetNextProcess(hProcess, dwAccess, 0, 0, &hProcess) == 0)
+	{
+		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
+		str_t str = buffer;
+		if (str.find(processName) != str.npos) break;
+	}
+
+	CloseHandle(ntdll);
+	return hProcess;
+}
+//--------------------------------------------
+pid_t Memory::Ex::Zw::GetProcessID(str_t processName)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return 0;
+	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZWGETNEXTPROCESS_STR);
+	if (!ZwGetNextProcess) return 0;
+
+	HANDLE hProcess = 0;
+	pid_t processId = 0;
+	TCHAR buffer[MAX_PATH];
+	while (ZwGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
+	{
+		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
+		str_t str = buffer;
+		if (str.find(processName) != str.npos)
+		{
+			processId = GetProcessId(hProcess);
+			break;
+		}
+	}
+	CloseHandle(ntdll);
+	return processId;
+}
+//--------------------------------------------
+HANDLE Memory::Ex::Zw::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return INVALID_HANDLE_VALUE;
+	ZwOpenProcess_t ZwOpenProcess = (ZwOpenProcess_t)GetProcAddress(ntdll, ZWOPENPROCESS_STR);
+	if (!ZwOpenProcess) return INVALID_HANDLE_VALUE;
+
+	HANDLE hProcess = 0;
+	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
+	CLIENT_ID clId = {};
+	clId.UniqueProcess = (HANDLE)pid;
+	ZwOpenProcess(&hProcess, dwAccess, &objAttr, &clId);
+	CloseHandle(ntdll);
+	return hProcess;
+}
+//--------------------------------------------
+bool Memory::Ex::Zw::CloseProcessHandle(HANDLE hProcess)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return false;
+	ZwClose_t ZwClose = (ZwClose_t)GetProcAddress(ntdll, ZWCLOSE_STR);
+	if (!ZwClose) return false;
+
+	ZwClose(hProcess);
+	CloseHandle(ntdll);
+	return true;
+}
+//--------------------------------------------
+void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return;
+	ZwWriteVirtualMemory_t ZwWriteVirtualMemory = (ZwWriteVirtualMemory_t)GetProcAddress(ntdll, ZWWRITEVIRTUALMEMORY_STR);
+	if (!ZwWriteVirtualMemory) return;
+
+	ZwWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
+	CloseHandle(ntdll);
+}
+//--------------------------------------------
+void Memory::Ex::Zw::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return;
+	ZwReadVirtualMemory_t ZwReadVirtualMemory = (ZwReadVirtualMemory_t)GetProcAddress(ntdll, ZWREADVIRTUALMEMORY_STR);
+	if (!ZwReadVirtualMemory) return;
+
+	ZwReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
+	CloseHandle(ntdll);
 }
 
 //Memory::Ex::Injection
