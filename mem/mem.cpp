@@ -158,7 +158,7 @@ BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T si
 }
 
 //Memory::Ex::Nt
-HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName)
+HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
@@ -167,7 +167,7 @@ HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName)
 
 	HANDLE hProcess = 0;
 	TCHAR buffer[MAX_PATH];
-	while (NtGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
+	while (NtGetNextProcess(hProcess, dwAccess, 0, 0, &hProcess) == 0)
 	{
 		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
 		str_t str = buffer;
@@ -226,6 +226,26 @@ bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
 
 	NtClose(hProcess);
 	return true;
+}
+//--------------------------------------------
+void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return;
+	NtWriteVirtualMemory_t NtWriteVirtualMemory = (NtWriteVirtualMemory_t)GetProcAddress(ntdll, NTWRITEVIRTUALMEMORY_STR);
+	if (!NtWriteVirtualMemory) return;
+
+	NtWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
+}
+//--------------------------------------------
+void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size)
+{
+	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
+	if (!ntdll) return;
+	NtReadVirtualMemory_t NtReadVirtualMemory = (NtReadVirtualMemory_t)GetProcAddress(ntdll, NTREADVIRTUALMEMORY_STR);
+	if (!NtReadVirtualMemory) return;
+
+	NtReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
 }
 
 //Memory::Ex::Injection

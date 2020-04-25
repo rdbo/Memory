@@ -113,6 +113,8 @@ typedef std::vector<str_t> vstr_t;
 #define NTGETNEXTPROCESS_STR "NtGetNextProcess"
 #define NTOPENPROCESS_STR "NtOpenProcess"
 #define NTCLOSE_STR "NtClose"
+#define NTREADVIRTUALMEMORY_STR "NtReadVirtualMemory"
+#define NTWRITEVIRTUALMEMORY_STR "NtWriteVirtualMemory"
 
 //## Nt Definitions
 typedef struct _UNICODE_STRING
@@ -143,6 +145,8 @@ typedef struct _CLIENT_ID
 typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
 typedef NTSTATUS(NTAPI* NtOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
 typedef NTSTATUS(NTAPI* NtClose_t)(HANDLE Handle);
+typedef NTSTATUS(NTAPI* NtReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
+typedef NTSTATUS(NTAPI* NtWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
 
 //## Assembly Instructions
 
@@ -182,10 +186,12 @@ namespace Memory
 
 		namespace Nt
 		{
-			HANDLE GetProcessHandle(str_t processName);
+			HANDLE GetProcessHandle(str_t processName, ACCESS_MASK dwAccess = MAXIMUM_ALLOWED);
 			pid_t GetProcessID(str_t processName);
 			HANDLE OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess = PROCESS_ALL_ACCESS);
 			bool CloseProcessHandle(HANDLE hProcess);
+			void WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size);
+			void ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size);
 		}
 
 		namespace Injection

@@ -71,8 +71,10 @@ int main()
 
 	//Reading / Writing Memory
 	int buffer;
-	Memory::Ex::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(500), sizeof(buffer));
-	std::cout << "Buffer (NtOpenHandle): " << buffer << std::endl;
+	Memory::Ex::Nt::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(500), sizeof(buffer));
+	int read_buffer;
+	Memory::Ex::Nt::ReadBuffer(ntOpenHandle, (mem_t)&buffer, &read_buffer, sizeof(read_buffer));
+	std::cout << "Buffer (NtOpenHandle): " << read_buffer << std::endl;
 
 	Memory::Ex::Nt::CloseProcessHandle(ntOpenHandle);
 	Memory::Ex::WriteBuffer(ntOpenHandle, (mem_t)&buffer, new int(10), sizeof(buffer));
