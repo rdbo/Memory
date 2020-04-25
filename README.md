@@ -7,6 +7,7 @@ You can use mem.h with either mem.lib or mem.cpp to compile your projects
 ```
 # Overview
 ## WINDOWS ##
+```
 Memory::EnumWindowsCallback
 Memory::ParseMask
 
@@ -58,8 +59,9 @@ Memory::In::Write
 Memory::In::Hook::Restore
 Memory::In::Hook::Detour
 Memory::In::Hook::TrampolineHook
-
+```
 ## LINUX ##
+```
 Memory::Ex::GetProcessIdByName
 Memory::Ex::ReadBuffer
 Memory::Ex::WriteBuffer
@@ -72,3 +74,4 @@ Memory::In::ReadBuffer
 Memory::In::WriteBuffer
 Memory::In::Read
 Memory::In::Write
+```
