@@ -53,6 +53,8 @@
 #define HOOK_MIN_SIZE 12
 #endif
 
+#define KNOWN_BYTE 'x'
+#define KNOWN_BYTE_UPPER 'X'
 #define UNKNOWN_BYTE '?'
 
 //## Includes / types
@@ -179,6 +181,11 @@ const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
 
 namespace Memory
 {
+	//Variables
+	extern HWND g_hWnd;
+	//Helper Functions
+	BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam);
+	char* ParseMask(char* mask);
 #	if INCLUDE_EXTERNALS
 	namespace Ex
 	{

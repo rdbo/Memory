@@ -122,7 +122,8 @@ int main()
 	std::cout << "Window Handle: " << Memory::In::GetCurrentWindowHandle() << std::endl;
 
 	byte_t* pattern = (byte_t*)"\x61\x62\x63\x64\x65\x66\x67\x68\x69\x70\x71\x72\x73\x74\x75";
-	const char mask[] = "xxxxxxxxxx";
+	const char mask[] = "xXxXXxxXxAB*XxX";
+	std::cout << Memory::ParseMask((char*)mask) << std::endl;
 	mem_t scanAddr = Memory::In::PatternScanModule(PROCESS_NAME, (byte_t*)pattern, (char*)mask);
 	std::cout << "Pattern Variable address: " << std::hex << (mem_t)(void*)pattern << std::endl;
 	std::cout << "Scan output: " << std::hex << scanAddr << std::endl;

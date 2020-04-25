@@ -2,10 +2,10 @@
 
 //Windows
 #if defined(WIN) && !defined(LINUX)
-//Global Variables
-HWND g_hWnd = NULL;
+//Variables
+HWND Memory::g_hWnd;
 //Helper Functions
-BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam)
+BOOL CALLBACK Memory::EnumWindowsCallback(HWND hWnd, LPARAM lParam)
 {
 	pid_t wndPid;
 	GetWindowThreadProcessId(hWnd, &wndPid);
@@ -13,6 +13,23 @@ BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam)
 
 	g_hWnd = hWnd;
 	return FALSE;
+}
+
+char* Memory::ParseMask(char* mask)
+{
+	size_t length = strlen(mask);
+	for (size_t i = 0; i < length; i++)
+	{
+		if (mask[i] != KNOWN_BYTE)
+		{
+			if (mask[i] == KNOWN_BYTE_UPPER)
+				mask[i] = KNOWN_BYTE;
+			else
+				mask[i] = UNKNOWN_BYTE;
+		}
+	}
+
+	return mask;
 }
 
 //Memory::Ex
@@ -454,6 +471,7 @@ MODULEINFO Memory::In::GetModuleInfo(str_t moduleName)
 //--------------------------------------------
 mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask)
 {
+	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
 	size_t scanSize = endAddr - baseAddr;
 	for (size_t i = 0; i < scanSize; i++)
