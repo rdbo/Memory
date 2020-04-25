@@ -202,6 +202,9 @@ namespace Memory
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+		MODULEINFO GetModuleInfo(HANDLE hProcess, str_t moduleName);
+		mem_t PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
+		mem_t PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, char* mask);
 
 		namespace Nt
 		{

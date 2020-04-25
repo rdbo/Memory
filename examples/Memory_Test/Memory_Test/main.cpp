@@ -128,6 +128,9 @@ int main()
 	std::cout << "Pattern Variable address: " << std::hex << (mem_t)(void*)pattern << std::endl;
 	std::cout << "Scan output: " << std::hex << scanAddr << std::endl;
 
+	mem_t scanAddrEx = Memory::Ex::PatternScanModule(hProc, PROCESS_NAME, (byte_t*)pattern, (char*)mask);
+	std::cout << "ScanEx output: " << std::hex << scanAddrEx << std::endl;
+
 	MODULEINFO modInfo = { 0 };
 	modInfo = Memory::In::GetModuleInfo(PROCESS_NAME);
 	scanAddr = Memory::In::PatternScan((mem_t)modInfo.lpBaseOfDll, (mem_t)modInfo.SizeOfImage, pattern, (char*)mask);

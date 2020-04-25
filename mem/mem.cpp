@@ -173,6 +173,50 @@ BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T si
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 	return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
 }
+//--------------------------------------------
+MODULEINFO Memory::Ex::GetModuleInfo(HANDLE hProcess, str_t moduleName)
+{
+	HMODULE hMod;
+	GetModuleHandleEx(NULL, moduleName.c_str(), &hMod);
+
+	MODULEINFO modInfo = { 0 };
+	GetModuleInformation(hProcess, hMod, &modInfo, sizeof(modInfo));
+
+	return modInfo;
+}
+//--------------------------------------------
+mem_t Memory::Ex::PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask)
+{
+	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
+	mask = ParseMask(mask);
+	mem_t patternLength = strlen(mask);
+	size_t scanSize = (size_t)endAddr - beginAddr;
+	for (size_t i = 0; i < scanSize; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < patternLength; j++)
+		{
+			byte_t curByte;
+			ReadBuffer(hProcess, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte));
+			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == curByte;
+		}
+
+		if (found) return beginAddr + i;
+	}
+
+	return 0;
+}
+//--------------------------------------------
+mem_t Memory::Ex::PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, char* mask)
+{
+	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
+	MODULEINFO modInfo = GetModuleInfo(hProcess, moduleName);
+	mem_t patternLength = strlen(mask);
+	mem_t baseAddr = (mem_t)modInfo.lpBaseOfDll;
+	size_t scanSize = (size_t)modInfo.SizeOfImage;
+
+	return PatternScan(hProcess, baseAddr, baseAddr + scanSize, pattern, mask);
+}
 
 //Memory::Ex::Nt
 HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
@@ -484,6 +528,8 @@ mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, ch
 
 		if (found) return baseAddr + i;
 	}
+
+	return 0;
 }
 //--------------------------------------------
 mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, char* mask)
@@ -492,16 +538,7 @@ mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, char* mas
 	size_t patternLength = strlen(mask);
 	mem_t baseAddr = (mem_t)modInfo.lpBaseOfDll;
 	size_t scanSize = (size_t)modInfo.SizeOfImage;
-	for (size_t i = 0; i < scanSize; i++)
-	{
-		bool found = true;
-		for (size_t j = 0; j < patternLength; j++)
-		{
-			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
-		}
-
-		if (found) return baseAddr + i;
-	}
+	return PatternScan(baseAddr, baseAddr + scanSize, pattern, mask);
 }
 
 //Memory::In::Hook
