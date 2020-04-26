@@ -75,4 +75,8 @@ Memory::In::ReadBuffer
 Memory::In::WriteBuffer
 Memory::In::Read
 Memory::In::Write
+
+Memory::In::Hook::Restore
+Memory::In::Hook::Detour
+Memory::In::Hook::TrampolineHook
 ```
