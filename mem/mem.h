@@ -7,9 +7,10 @@
 
 //Usage notes
 //1. The pattern scan default format is 'x' for known byte and '?' for unknown byte.
-
+#ifndef linux
+#define linux
+#endif
 #pragma once
-
 //## Pre-Includes
 
 #define INCLUDE_EXTERNALS 1
@@ -111,7 +112,7 @@ typedef std::vector<str_t> vstr_t;
 #endif
 
 //## Nt / Zw
-
+#if defined(WIN)
 #define NTGETNEXTPROCESS_STR "NtGetNextProcess"
 #define NTOPENPROCESS_STR "NtOpenProcess"
 #define NTCLOSE_STR "NtClose"
@@ -161,7 +162,7 @@ typedef NTSTATUS(NTAPI* ZwOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK Desi
 typedef NTSTATUS(NTAPI* ZwClose_t)(HANDLE Handle);
 typedef NTSTATUS(NTAPI* ZwReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
 typedef NTSTATUS(NTAPI* ZwWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
-
+#endif
 //## Assembly Instructions
 
 #if defined(ARCH_X86)
@@ -294,8 +295,11 @@ namespace Memory
 	namespace In
 	{
 		void ZeroMem(void* src, size_t size);
+		int ProtectMemory(mem_t address, size_t size, int protection);
 		bool IsBadPointer(void* pointer);
 		pid_t GetCurrentProcessID();
+		bool ReadBuffer(mem_t address, void* buffer, size_t size);
+		bool WriteBuffer(mem_t address, void* value, size_t size);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
@@ -310,8 +314,13 @@ namespace Memory
 			return true;
 		}
 
-		bool ReadBuffer(mem_t address, void* buffer, size_t size);
-		bool WriteBuffer(mem_t address, void* value, size_t size);
+		namespace Hook
+		{
+			extern std::map<mem_t, std::vector<byte_t>> restore_arr;
+			bool Restore(mem_t address);
+			bool Detour(byte_t* src, byte_t* dst, size_t size);
+			byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
+		}
 	}
 #	endif
 }

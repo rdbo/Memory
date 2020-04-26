@@ -557,7 +557,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	if (size < HOOK_MIN_SIZE) return false;
 
 	//Save stolen bytes
-	byte_t* bytes = new byte_t(size);
+	byte_t* bytes = new byte_t[size];
 	ZeroMem(bytes, size);
 	memcpy(bytes, src, size);
 	std::vector<byte_t> vbytes;
@@ -692,6 +692,13 @@ void Memory::In::ZeroMem(void* src, size_t size)
 	memset(src, 0x0, size + 1);
 }
 //--------------------------------------------
+int Memory::In::ProtectMemory(mem_t address, size_t size, int protection)
+{
+	long pagesize = sysconf(_SC_PAGE_SIZE);
+	address = address - (address % pagesize);
+	return mprotect((void*)address, size, protection);
+}
+//--------------------------------------------
 bool Memory::In::IsBadPointer(void* pointer)
 {
 	int fh = open((const char*)pointer, 0, 0);
@@ -721,6 +728,70 @@ bool Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
 {
 	memcpy((void*)address, (void*)value, size);
 	return true;
+}
+//Memory::In::Hook
+
+std::map<mem_t, std::vector<byte_t>> Memory::In::Hook::restore_arr;
+
+bool Memory::In::Hook::Restore(mem_t address)
+{
+    if (restore_arr.count(address) <= 0) return false;
+	std::vector<byte_t> obytes = restore_arr.at(address);
+	WriteBuffer(address, obytes.data(), obytes.size());
+	return true;	
+}
+//--------------------------------------------
+bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
+{
+	if(size < HOOK_MIN_SIZE) return false;
+	if(ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
+
+	//Save stolen bytes
+	byte_t* bytes = new byte_t[size];
+	ZeroMem(bytes, size);
+	memcpy(bytes, src, size);
+	std::vector<byte_t> vbytes;
+	vbytes.reserve(size);
+	for (int i = 0; i < size; i++)
+	{
+		vbytes.insert(vbytes.begin() + i, bytes[i]);
+	}
+	restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
+
+	//Detour
+#	if defined(ARCH_X86)
+	mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - HOOK_MIN_SIZE;
+	byte_t CodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
+	*(mem_t*)((mem_t)CodeCave + sizeof(JMP)) = jmpAddr;
+	memcpy(src, CodeCave, sizeof(CodeCave));
+#	elif defined(ARCH_X64)
+	mem_t jmpAddr = (mem_t)dst;
+	byte_t CodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
+	*(mem_t*)((mem_t)CodeCave + sizeof(MOV_RAX)) = jmpAddr;
+	memcpy(src, CodeCave, sizeof(CodeCave));
+#	endif
+	return true;
+}
+//--------------------------------------------
+byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
+{
+	if(size < HOOK_MIN_SIZE) return 0;
+	byte_t* gateway = new byte_t[size + HOOK_MIN_SIZE];
+	ProtectMemory((mem_t)gateway, size + HOOK_MIN_SIZE, PROT_EXEC | PROT_READ | PROT_WRITE);
+	memcpy(gateway, src, size);
+#	if defined(ARCH_X86)
+	mem_t jmpBack = (mem_t)src - (mem_t)gateway - HOOK_MIN_SIZE;
+	byte_t GatewayCodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP)) = jmpBack;
+	memcpy((void*)((mem_t)gateway + size), (void*)GatewayCodeCave, sizeof(GatewayCodeCave));
+#	elif defined(ARCH_X64)
+	mem_t jmpBack = (mem_t)src + size;
+	byte_t GatewayCodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOV_RAX)) = jmpBack;
+	memcpy((void*)((mem_t)gateway + size), (void*)GatewayCodeCave, sizeof(GatewayCodeCave));
+#	endif
+	Detour(src, dst, size);
+	return gateway;
 }
 #endif //INCLUDE_INTERNALS
 #endif //Linux
