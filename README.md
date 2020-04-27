@@ -2,7 +2,7 @@
 Memory Management on Windows/Linux
 # How to use it?
 ```
-To compile Windows, open the solution on Visual Studio and compile it. For Linux, just run "compile.sh" on a terminal.
+To compile on Linux, just run "compile.sh" on a terminal.
 Check out the examples folder for assistance
 You can use mem.h with either mem.cpp or mem.lib (Windows) / mem.a (Linux) to compile your projects
 ```
