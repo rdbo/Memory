@@ -7,9 +7,6 @@
 
 //Usage notes
 //1. The pattern scan default format is 'x' for known byte and '?' for unknown byte.
-#ifndef linux
-#define linux
-#endif
 #pragma once
 //## Pre-Includes
 
