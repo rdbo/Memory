@@ -64,8 +64,6 @@ Memory::In::Hook::TrampolineHook
 ## LINUX ##
 ```
 Memory::Ex::GetProcessIdByName
-Memory::Ex::ReadBuffer
-Memory::Ex::WriteBuffer
 Memory::Ex::IsProcessRunning
 
 Memory::In::ZeroMem
