@@ -651,6 +651,42 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 	return pid;
 }
 //--------------------------------------------
+mem_t Memory::Ex::GetModuleBaseAddress(pid_t pid, str_t moduleName)
+{
+	char path_buffer[DEFAULT_BUFFER_SIZE];
+    char baseAddress[MAX_BUFFER_SIZE];
+    snprintf(path_buffer, sizeof(path_buffer), PROC_MAPS_STR, pid);
+    int proc_maps = open(path_buffer, O_RDONLY);
+    size_t size = lseek(proc_maps, 0, SEEK_END);
+    char* file_buffer = new char[size + 1];
+    if(size == 0 || !proc_maps || !file_buffer) return BAD_RETURN;
+    memset(file_buffer, 0x0, size + 1);
+    for (size_t i = 0; read(proc_maps, file_buffer + i, 1) > 0; i++);
+
+    char* ptr = NULL;
+    if (moduleName.c_str() != NULL && (ptr = strstr(file_buffer, moduleName.c_str())) == NULL)
+        if ((ptr = strstr(file_buffer, moduleName.c_str())) == NULL) return BAD_RETURN;
+    else if ((ptr = strstr(file_buffer, "r-xp")) == NULL) return BAD_RETURN;
+
+    while (*ptr != '\n' && ptr >= file_buffer)
+    {
+        ptr--;
+    }
+    ptr++;
+
+    for (int i = 0; *ptr != '-'; i++)
+    {
+        baseAddress[i] = *ptr;
+        ptr++;
+    }
+
+    mem_t base = (mem_t)strtol(baseAddress, NULL, 16);
+    close(proc_maps);
+    free(file_buffer);
+    
+    return base;
+}
+//--------------------------------------------
 bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 {
     if(size == 0 || buffer == 0 || pid == INVALID_PID) return false;

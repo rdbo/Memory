@@ -93,8 +93,11 @@ typedef uintptr_t mem_t;
 #include <sys/uio.h>
 #define INVALID_PID -1
 #define DEFAULT_BUFFER_SIZE 64
-#define PROC_MEM_STR "/proc/%i/mem"
+#define MAX_BUFFER_SIZE 1024
 #define PROC_STR "/proc/%i"
+#define PROC_MAPS_STR "/proc/%i/maps"
+#define PROC_MEM_STR "/proc/%i/mem"
+#define EXECUTABLE_MEMORY_STR "r-xp"
 typedef off_t mem_t;
 typedef char TCHAR;
 #endif
@@ -286,6 +289,7 @@ namespace Memory
 	namespace Ex
 	{
 		pid_t GetProcessIdByName(str_t processName);
+		mem_t GetModuleBaseAddress(pid_t pid, str_t moduleName);
 		bool ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 		bool WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 		int VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
