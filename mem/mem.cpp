@@ -651,34 +651,82 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 	return pid;
 }
 //--------------------------------------------
-void Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 {
-	char file[MAX_FILENAME];
-	sprintf(file, "/proc/%ld/mem", (long)pid);
-	int fd = open(file, O_RDWR);
-	ptrace(PTRACE_ATTACH, pid, 0, 0);
-	waitpid(pid, NULL, 0);
-	pread(fd, buffer, size, address);
-	ptrace(PTRACE_DETACH, pid, 0, 0);
-	close(fd);
+    if(size == 0 || buffer == 0 || pid == INVALID_PID) return false;
+    
+    char path_buffer[DEFAULT_BUFFER_SIZE];
+    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+
+    int proc_mem = open(path_buffer, O_RDONLY);
+    lseek(proc_mem, address, SEEK_SET);
+    read(proc_mem, buffer, size);
+    return true;
 }
 //--------------------------------------------
-void Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 {
-	char file[MAX_FILENAME];
-	sprintf(file, "/proc/%ld/mem", (long)pid);
-	int fd = open(file, O_RDWR);
+    if(size == 0 || value == 0 || pid == INVALID_PID) return false;
+    
+    char path_buffer[DEFAULT_BUFFER_SIZE];
+    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+
+    int proc_mem = open(path_buffer, O_WRONLY);
+    lseek(proc_mem, address, SEEK_SET);
+    write(proc_mem, value, size);
+    return true;
+}
+//--------------------------------------------
+int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+{
+    struct iovec src;
+    struct iovec dst;
+    dst.iov_base = buffer;
+    dst.iov_len = size;
+    src.iov_base = (void*)address;
+    src.iov_len = size;
+    return process_vm_readv(pid, &dst, 1, &src, 1, 0);
+}
+//--------------------------------------------
+int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+{
+    struct iovec src;
+    struct iovec dst;
+    src.iov_base = value;
+    src.iov_len = size;
+    dst.iov_base = (void*)address;
+    dst.iov_len = size;
+    return process_vm_writev(pid, &src, 1, &dst, 1, 0);
+}
+//--------------------------------------------
+void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+{
+	char path_buffer[DEFAULT_BUFFER_SIZE];
+    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	int proc_mem = open(path_buffer, O_RDWR);
 	ptrace(PTRACE_ATTACH, pid, 0, 0);
 	waitpid(pid, NULL, 0);
-	pwrite(fd, value, size, address);
+	pread(proc_mem, buffer, size, address);
 	ptrace(PTRACE_DETACH, pid, 0, 0);
-	close(fd);
+	close(proc_mem);
+}
+//--------------------------------------------
+void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+{
+	char path_buffer[DEFAULT_BUFFER_SIZE];
+    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	int proc_mem = open(path_buffer, O_RDWR);
+	ptrace(PTRACE_ATTACH, pid, 0, 0);
+	waitpid(pid, NULL, 0);
+	pwrite(proc_mem, value, size, address);
+	ptrace(PTRACE_DETACH, pid, 0, 0);
+	close(proc_mem);
 }
 //--------------------------------------------
 bool Memory::Ex::IsProcessRunning(pid_t pid)
 {
-	char dirbuf[MAX_FILENAME];
-	sprintf(dirbuf, "/proc/%ld", (long)pid);
+	char dirbuf[DEFAULT_BUFFER_SIZE];
+	snprintf(dirbuf, sizeof(dirbuf), PROC_STR, pid);
 	struct stat status;
 	stat(dirbuf, &status);
 	return status.st_mode & S_IFDIR != 0;

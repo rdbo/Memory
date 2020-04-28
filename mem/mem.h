@@ -90,8 +90,11 @@ typedef uintptr_t mem_t;
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/uio.h>
 #define INVALID_PID -1
-#define MAX_FILENAME 256
+#define DEFAULT_BUFFER_SIZE 64
+#define PROC_MEM_STR "/proc/%i/mem"
+#define PROC_STR "/proc/%i"
 typedef off_t mem_t;
 typedef char TCHAR;
 #endif
@@ -283,8 +286,12 @@ namespace Memory
 	namespace Ex
 	{
 		pid_t GetProcessIdByName(str_t processName);
-		void ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
-		void WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		bool ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+		bool WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		int VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+		int VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		void PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
+		void PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 		bool IsProcessRunning(pid_t pid);
 	}
 #	endif //INCLUDE_EXTERNALS
