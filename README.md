@@ -64,7 +64,7 @@ Memory::In::Hook::TrampolineHook
 ## LINUX ##
 ```
 Memory::Ex::GetProcessIdByName
-Memory::Ex::GetModuleBaseAddress
+Memory::Ex::GetModuleAddress
 Memory::Ex::ReadBuffer
 Memory::Ex::WriteBuffer
 Memory::Ex::VmReadBuffer
