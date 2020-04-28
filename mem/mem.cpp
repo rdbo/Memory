@@ -651,7 +651,7 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 	return pid;
 }
 //--------------------------------------------
-mem_t Memory::Ex::GetModuleBaseAddress(pid_t pid, str_t moduleName)
+mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
     char baseAddress[MAX_BUFFER_SIZE];

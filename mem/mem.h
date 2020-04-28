@@ -289,7 +289,7 @@ namespace Memory
 	namespace Ex
 	{
 		pid_t GetProcessIdByName(str_t processName);
-		mem_t GetModuleBaseAddress(pid_t pid, str_t moduleName);
+		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
 		bool ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 		bool WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 		int VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
