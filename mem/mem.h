@@ -297,6 +297,7 @@ namespace Memory
 		int VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
 		void PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
 		void PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
 		bool IsProcessRunning(pid_t pid);
 	}
 #	endif //INCLUDE_EXTERNALS

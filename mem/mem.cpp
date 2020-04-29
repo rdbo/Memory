@@ -778,6 +778,27 @@ void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t
 	close(proc_mem);
 }
 //--------------------------------------------
+mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask)
+{
+    mask = ParseMask(mask);
+    size_t patternLength = strlen(mask);
+    size_t scanSize = (size_t)endAddr - beginAddr;
+    for (size_t i = 0; i < scanSize; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < patternLength; j++)
+		{
+			byte_t curByte;
+			ReadBuffer(pid, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte));
+			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == curByte;
+		}
+
+		if (found) return beginAddr + i;
+	}
+
+	return 0;
+}
+//--------------------------------------------
 bool Memory::Ex::IsProcessRunning(pid_t pid)
 {
 	char dirbuf[DEFAULT_BUFFER_SIZE];
