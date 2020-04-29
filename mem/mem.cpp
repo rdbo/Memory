@@ -615,6 +615,25 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 //Linux
 #if defined(LINUX) && !defined(WIN)
 
+//Memory
+//Helper functions
+char* Memory::ParseMask(char* mask)
+{
+	size_t length = strlen(mask);
+	for (size_t i = 0; i < length; i++)
+	{
+		if (mask[i] != KNOWN_BYTE)
+		{
+			if (mask[i] == KNOWN_BYTE_UPPER)
+				mask[i] = KNOWN_BYTE;
+			else
+				mask[i] = UNKNOWN_BYTE;
+		}
+	}
+
+	return mask;
+}
+
 //Memory::Ex
 #if INCLUDE_EXTERNALS
 pid_t Memory::Ex::GetProcessIdByName(str_t processName)
@@ -812,6 +831,26 @@ bool Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
 {
 	memcpy((void*)address, (void*)value, size);
 	return true;
+}
+//--------------------------------------------
+mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask)
+{
+	mask = ParseMask(mask);
+	size_t patternLength = strlen(mask);
+	size_t scanSize = endAddr - baseAddr;
+    ProtectMemory(baseAddr, scanSize, PROT_EXEC | PROT_READ | PROT_WRITE);
+	for (size_t i = 0; i < scanSize; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < patternLength; j++)
+		{
+			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
+		}
+
+		if (found) return baseAddr + i;
+	}
+
+	return BAD_RETURN;
 }
 //Memory::In::Hook
 

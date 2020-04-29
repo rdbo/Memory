@@ -285,6 +285,7 @@ namespace Memory
 
 namespace Memory
 {
+	char* ParseMask(char* mask);
 #	if INCLUDE_EXTERNALS
 	namespace Ex
 	{
@@ -308,6 +309,7 @@ namespace Memory
 		pid_t GetCurrentProcessID();
 		bool ReadBuffer(mem_t address, void* buffer, size_t size);
 		bool WriteBuffer(mem_t address, void* value, size_t size);
+		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
