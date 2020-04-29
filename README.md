@@ -63,6 +63,8 @@ Memory::In::Hook::TrampolineHook
 ```
 ## LINUX ##
 ```
+Memory::ParseMask
+
 Memory::Ex::GetProcessIdByName
 Memory::Ex::GetModuleAddress
 Memory::Ex::ReadBuffer
