@@ -71,6 +71,7 @@ Memory::Ex::VmReadBuffer
 Memory::Ex::VmWriteBuffer
 Memory::Ex::PtraceReadBuffer
 Memory::Ex::PtraceWriteBuffer
+Memory::Ex::PatternScan
 Memory::Ex::IsProcessRunning
 
 Memory::In::ZeroMem
@@ -78,6 +79,7 @@ Memory::In::IsBadPointer
 Memory::In::GetCurrentProcessID
 Memory::In::ReadBuffer
 Memory::In::WriteBuffer
+Memory::In::PatternScan
 Memory::In::Read
 Memory::In::Write
 
