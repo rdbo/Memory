@@ -55,6 +55,12 @@
 #define KNOWN_BYTE_UPPER 'X'
 #define UNKNOWN_BYTE '?'
 
+#define PAD_STR __pad
+#define CONCAT_STR(a, b) a##b
+#define CONCAT_STR_WRAPPER(a, b) CONCAT_STR(a, b)
+#define NEW_PAD(size) CONCAT_STR_WRAPPER(PAD_STR, __COUNTER__)[size]
+#define CREATE_UNION_MEMBER(type, varname, offset) struct { unsigned char NEW_PAD(offset); type varname; }
+
 //## Includes / types
 
 #include <iostream>
@@ -134,7 +140,7 @@ typedef struct _UNICODE_STRING
 	USHORT Length;
 	USHORT MaximumLength;
 	PWSTR Buffer;
-} UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING;
+} UNICODE_STRING, * PUNICODE_STRING, ** PPUNICODE_STRING;
 
 typedef struct _OBJECT_ATTRIBUTES
 {
@@ -151,7 +157,7 @@ typedef struct _CLIENT_ID
 {
 	HANDLE UniqueProcess;
 	HANDLE UniqueThread;
-} CLIENT_ID, *PCLIENT_ID;
+} CLIENT_ID, * PCLIENT_ID;
 
 //## Nt / Zw Functions
 typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);

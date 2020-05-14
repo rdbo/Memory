@@ -673,91 +673,91 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
-    char baseAddress[MAX_BUFFER_SIZE];
-    snprintf(path_buffer, sizeof(path_buffer), PROC_MAPS_STR, pid);
-    int proc_maps = open(path_buffer, O_RDONLY);
-    size_t size = lseek(proc_maps, 0, SEEK_END);
-    char* file_buffer = new char[size + 1];
-    if(size == 0 || !proc_maps || !file_buffer) return BAD_RETURN;
-    memset(file_buffer, 0x0, size + 1);
-    for (size_t i = 0; read(proc_maps, file_buffer + i, 1) > 0; i++);
+	char baseAddress[MAX_BUFFER_SIZE];
+	snprintf(path_buffer, sizeof(path_buffer), PROC_MAPS_STR, pid);
+	int proc_maps = open(path_buffer, O_RDONLY);
+	size_t size = lseek(proc_maps, 0, SEEK_END);
+	char* file_buffer = new char[size + 1];
+	if (size == 0 || !proc_maps || !file_buffer) return BAD_RETURN;
+	memset(file_buffer, 0x0, size + 1);
+	for (size_t i = 0; read(proc_maps, file_buffer + i, 1) > 0; i++);
 
-    char* ptr = NULL;
-    if (moduleName.c_str() != NULL && (ptr = strstr(file_buffer, moduleName.c_str())) == NULL)
-        if ((ptr = strstr(file_buffer, moduleName.c_str())) == NULL) return BAD_RETURN;
-    else if ((ptr = strstr(file_buffer, "r-xp")) == NULL) return BAD_RETURN;
+	char* ptr = NULL;
+	if (moduleName.c_str() != NULL && (ptr = strstr(file_buffer, moduleName.c_str())) == NULL)
+		if ((ptr = strstr(file_buffer, moduleName.c_str())) == NULL) return BAD_RETURN;
+		else if ((ptr = strstr(file_buffer, "r-xp")) == NULL) return BAD_RETURN;
 
-    while (*ptr != '\n' && ptr >= file_buffer)
-    {
-        ptr--;
-    }
-    ptr++;
+	while (*ptr != '\n' && ptr >= file_buffer)
+	{
+		ptr--;
+	}
+	ptr++;
 
-    for (int i = 0; *ptr != '-'; i++)
-    {
-        baseAddress[i] = *ptr;
-        ptr++;
-    }
+	for (int i = 0; *ptr != '-'; i++)
+	{
+		baseAddress[i] = *ptr;
+		ptr++;
+	}
 
-    mem_t base = (mem_t)strtol(baseAddress, NULL, 16);
-    close(proc_maps);
-    free(file_buffer);
-    
-    return base;
+	mem_t base = (mem_t)strtol(baseAddress, NULL, 16);
+	close(proc_maps);
+	free(file_buffer);
+
+	return base;
 }
 //--------------------------------------------
 bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 {
-    if(size == 0 || buffer == 0 || pid == INVALID_PID) return false;
-    
-    char path_buffer[DEFAULT_BUFFER_SIZE];
-    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	if (size == 0 || buffer == 0 || pid == INVALID_PID) return false;
 
-    int proc_mem = open(path_buffer, O_RDONLY);
-    lseek(proc_mem, address, SEEK_SET);
-    read(proc_mem, buffer, size);
-    return true;
+	char path_buffer[DEFAULT_BUFFER_SIZE];
+	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+
+	int proc_mem = open(path_buffer, O_RDONLY);
+	lseek(proc_mem, address, SEEK_SET);
+	read(proc_mem, buffer, size);
+	return true;
 }
 //--------------------------------------------
 bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 {
-    if(size == 0 || value == 0 || pid == INVALID_PID) return false;
-    
-    char path_buffer[DEFAULT_BUFFER_SIZE];
-    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	if (size == 0 || value == 0 || pid == INVALID_PID) return false;
 
-    int proc_mem = open(path_buffer, O_WRONLY);
-    lseek(proc_mem, address, SEEK_SET);
-    write(proc_mem, value, size);
-    return true;
+	char path_buffer[DEFAULT_BUFFER_SIZE];
+	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+
+	int proc_mem = open(path_buffer, O_WRONLY);
+	lseek(proc_mem, address, SEEK_SET);
+	write(proc_mem, value, size);
+	return true;
 }
 //--------------------------------------------
 int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 {
-    struct iovec src;
-    struct iovec dst;
-    dst.iov_base = buffer;
-    dst.iov_len = size;
-    src.iov_base = (void*)address;
-    src.iov_len = size;
-    return process_vm_readv(pid, &dst, 1, &src, 1, 0);
+	struct iovec src;
+	struct iovec dst;
+	dst.iov_base = buffer;
+	dst.iov_len = size;
+	src.iov_base = (void*)address;
+	src.iov_len = size;
+	return process_vm_readv(pid, &dst, 1, &src, 1, 0);
 }
 //--------------------------------------------
 int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 {
-    struct iovec src;
-    struct iovec dst;
-    src.iov_base = value;
-    src.iov_len = size;
-    dst.iov_base = (void*)address;
-    dst.iov_len = size;
-    return process_vm_writev(pid, &src, 1, &dst, 1, 0);
+	struct iovec src;
+	struct iovec dst;
+	src.iov_base = value;
+	src.iov_len = size;
+	dst.iov_base = (void*)address;
+	dst.iov_len = size;
+	return process_vm_writev(pid, &src, 1, &dst, 1, 0);
 }
 //--------------------------------------------
 void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
-    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
 	int proc_mem = open(path_buffer, O_RDWR);
 	ptrace(PTRACE_ATTACH, pid, 0, 0);
 	waitpid(pid, NULL, 0);
@@ -769,7 +769,7 @@ void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t
 void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
-    snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
 	int proc_mem = open(path_buffer, O_RDWR);
 	ptrace(PTRACE_ATTACH, pid, 0, 0);
 	waitpid(pid, NULL, 0);
@@ -780,10 +780,10 @@ void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t
 //--------------------------------------------
 mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask)
 {
-    mask = ParseMask(mask);
-    size_t patternLength = strlen(mask);
-    size_t scanSize = (size_t)endAddr - beginAddr;
-    for (size_t i = 0; i < scanSize; i++)
+	mask = ParseMask(mask);
+	size_t patternLength = strlen(mask);
+	size_t scanSize = (size_t)endAddr - beginAddr;
+	for (size_t i = 0; i < scanSize; i++)
 	{
 		bool found = true;
 		for (size_t j = 0; j < patternLength; j++)
@@ -859,7 +859,7 @@ mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, ch
 	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
 	size_t scanSize = endAddr - baseAddr;
-    ProtectMemory(baseAddr, scanSize, PROT_EXEC | PROT_READ | PROT_WRITE);
+	ProtectMemory(baseAddr, scanSize, PROT_EXEC | PROT_READ | PROT_WRITE);
 	for (size_t i = 0; i < scanSize; i++)
 	{
 		bool found = true;
@@ -879,16 +879,16 @@ std::map<mem_t, std::vector<byte_t>> Memory::In::Hook::restore_arr;
 
 bool Memory::In::Hook::Restore(mem_t address)
 {
-    if (restore_arr.count(address) <= 0) return false;
+	if (restore_arr.count(address) <= 0) return false;
 	std::vector<byte_t> obytes = restore_arr.at(address);
 	WriteBuffer(address, obytes.data(), obytes.size());
-	return true;	
+	return true;
 }
 //--------------------------------------------
 bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 {
-	if(size < HOOK_MIN_SIZE) return false;
-	if(ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
+	if (size < HOOK_MIN_SIZE) return false;
+	if (ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
 
 	//Save stolen bytes
 	byte_t* bytes = new byte_t[size];
@@ -919,7 +919,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 //--------------------------------------------
 byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 {
-	if(size < HOOK_MIN_SIZE) return 0;
+	if (size < HOOK_MIN_SIZE) return 0;
 	byte_t* gateway = new byte_t[size + HOOK_MIN_SIZE];
 	ProtectMemory((mem_t)gateway, size + HOOK_MIN_SIZE, PROT_EXEC | PROT_READ | PROT_WRITE);
 	memcpy(gateway, src, size);
