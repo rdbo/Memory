@@ -61,6 +61,12 @@
 #define NEW_PAD(size) CONCAT_STR_WRAPPER(PAD_STR, __COUNTER__)[size]
 #define CREATE_UNION_MEMBER(type, varname, offset) struct { unsigned char NEW_PAD(offset); type varname; }
 
+#if defined(UCS)
+#define AUTO_STR(str) CONCAT_STR_WRAPPER(L, str)
+#elif defined(MBCS)
+#define AUTO_STR(str) str
+#endif
+
 //## Includes / types
 
 #include <iostream>
@@ -114,14 +120,9 @@ typedef char* cstr_t;
 typedef std::basic_string<TCHAR> str_t;
 typedef std::vector<str_t> vstr_t;
 
-#if defined(UCS)
-#define NTDLL_NAME L"ntdll.dll"
-#elif defined(MBCS)
-#define NTDLL_NAME "ntdll.dll"
-#endif
-
 //## Nt / Zw
 #if defined(WIN)
+#define NTDLL_NAME AUTO_STR("ntdll.dll")
 #define NTGETNEXTPROCESS_STR "NtGetNextProcess"
 #define NTOPENPROCESS_STR "NtOpenProcess"
 #define NTCLOSE_STR "NtClose"

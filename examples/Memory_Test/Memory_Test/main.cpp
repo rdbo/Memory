@@ -1,13 +1,8 @@
 #include "pch.h"
 #include "../../../mem/mem.h"
 
-#if defined(UCS) //Unicode
-#define PROCESS_NAME L"Memory_Test.exe"
-#define WINDOW_TITLE L"Memory_Test"
-#elif defined(MBCS) //Multibyte
-#define PROCESS_NAME "Memory_Test.exe"
-#define WINDOW_TITLE "Memory_Test"
-#endif
+#define PROCESS_NAME AUTO_STR("Memory_Test.exe")
+#define WINDOW_TITLE AUTO_STR("Memory_Test")
 
 #define DELAY 1000
 #define NEW_VALUE (int)500
@@ -20,6 +15,12 @@
 #define CONVENTION __fastcall
 #define HOOK_LENGTH 13
 #define JUMP_INSTRUCTION_LENGTH 5
+#endif
+
+#if defined(UCS)
+#define out std::wcout
+#elif defined(MBCS)
+#define out std::cout
 #endif
 
 void CONVENTION Function(int number)
@@ -42,6 +43,8 @@ void CONVENTION hkFunction(int number)
 #if defined(MEMORY)
 int main()
 {
+	out << L"Window Title: " << WINDOW_TITLE << std::endl;
+	out << L"Process Name: " << PROCESS_NAME << std::endl;
 	int targetVariable = 100;
 	//--Windows--
 #	if defined(WIN)
