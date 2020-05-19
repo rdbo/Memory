@@ -83,7 +83,6 @@
 #include <TlHelp32.h>
 #include <Psapi.h>
 typedef DWORD pid_t;
-typedef uintptr_t mem_t;
 //Linux
 #elif defined(LINUX)
 #include <sys/types.h>
@@ -110,10 +109,11 @@ typedef uintptr_t mem_t;
 #define PROC_MAPS_STR "/proc/%i/maps"
 #define PROC_MEM_STR "/proc/%i/mem"
 #define EXECUTABLE_MEMORY_STR "r-xp"
-typedef off_t mem_t;
 typedef char TCHAR;
 #endif
 
+typedef unsigned int mem_t;
+typedef void* ptr_t;
 typedef unsigned char byte_t;
 typedef TCHAR* tstr_t;
 typedef char* cstr_t;
@@ -165,13 +165,13 @@ typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCE
 typedef NTSTATUS(NTAPI* NtOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
 typedef NTSTATUS(NTAPI* NtClose_t)(HANDLE Handle);
 typedef NTSTATUS(NTAPI* NtReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
-typedef NTSTATUS(NTAPI* NtWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
+typedef NTSTATUS(NTAPI* NtWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const ptr_t Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
 
 typedef NTSTATUS(NTAPI* ZwGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
 typedef NTSTATUS(NTAPI* ZwOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
 typedef NTSTATUS(NTAPI* ZwClose_t)(HANDLE Handle);
 typedef NTSTATUS(NTAPI* ZwReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
-typedef NTSTATUS(NTAPI* ZwWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const void* Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
+typedef NTSTATUS(NTAPI* ZwWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const ptr_t Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
 #endif
 //## Assembly Instructions
 
@@ -211,8 +211,8 @@ namespace Memory
 		vstr_t GetModuleList(pid_t pid);
 		bool IsModuleLoaded(str_t moduleName, vstr_t moduleList);
 		mem_t GetPointer(HANDLE hProc, mem_t ptr, std::vector<mem_t> offsets);
-		BOOL WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size);
-		BOOL ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size);
+		BOOL WriteBuffer(HANDLE hProc, mem_t address, const ptr_t value, SIZE_T size);
+		BOOL ReadBuffer(HANDLE hProc, mem_t address, ptr_t buffer, SIZE_T size);
 		MODULEINFO GetModuleInfo(HANDLE hProcess, str_t moduleName);
 		mem_t PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
 		mem_t PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, char* mask);
@@ -223,8 +223,8 @@ namespace Memory
 			pid_t GetProcessID(str_t processName);
 			HANDLE OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess = PROCESS_ALL_ACCESS);
 			bool CloseProcessHandle(HANDLE hProcess);
-			void WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size);
-			void ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size);
+			void WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size);
+			void ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size);
 		}
 
 		namespace Zw
@@ -233,8 +233,8 @@ namespace Memory
 			pid_t GetProcessID(str_t processName);
 			HANDLE OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess = PROCESS_ALL_ACCESS);
 			bool CloseProcessHandle(HANDLE hProcess);
-			void WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size);
-			void ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size);
+			void WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size);
+			void ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size);
 		}
 
 		namespace Injection
@@ -250,15 +250,15 @@ namespace Memory
 #	if INCLUDE_INTERNALS
 	namespace In
 	{
-		void ZeroMem(void* src, size_t size);
-		bool IsBadPointer(void* pointer);
+		void ZeroMem(ptr_t src, size_t size);
+		bool IsBadPointer(ptr_t pointer);
 		pid_t GetCurrentProcessID();
 		HANDLE GetCurrentProcessHandle();
 		HWND GetCurrentWindowHandle();
 		mem_t GetModuleAddress(str_t moduleName);
 		mem_t GetPointer(mem_t baseAddress, std::vector<mem_t> offsets);
-		bool WriteBuffer(mem_t address, const void* value, SIZE_T size);
-		bool ReadBuffer(mem_t address, void* buffer, SIZE_T size);
+		bool WriteBuffer(mem_t address, const ptr_t value, SIZE_T size);
+		bool ReadBuffer(mem_t address, ptr_t buffer, SIZE_T size);
 		MODULEINFO GetModuleInfo(str_t moduleName);
 		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);;
 		mem_t PatternScanModule(str_t moduleName, byte_t* pattern, char* mask);
@@ -298,12 +298,12 @@ namespace Memory
 	{
 		pid_t GetProcessIdByName(str_t processName);
 		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
-		bool ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
-		bool WriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
-		int VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
-		int VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
-		void PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size);
-		void PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size);
+		bool ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
+		bool WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
+		int VmReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
+		int VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
+		void PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
+		void PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
 		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
 		bool IsProcessRunning(pid_t pid);
 	}
@@ -311,23 +311,23 @@ namespace Memory
 #	if INCLUDE_INTERNALS
 	namespace In
 	{
-		void ZeroMem(void* src, size_t size);
+		void ZeroMem(ptr_t src, size_t size);
 		int ProtectMemory(mem_t address, size_t size, int protection);
-		bool IsBadPointer(void* pointer);
+		bool IsBadPointer(ptr_t pointer);
 		pid_t GetCurrentProcessID();
-		bool ReadBuffer(mem_t address, void* buffer, size_t size);
-		bool WriteBuffer(mem_t address, void* value, size_t size);
+		bool ReadBuffer(mem_t address, ptr_t buffer, size_t size);
+		bool WriteBuffer(mem_t address, ptr_t value, size_t size);
 		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
-			if (IsBadPointer((void*)address)) return (type_t)BAD_RETURN;
+			if (IsBadPointer((ptr_t)address)) return (type_t)BAD_RETURN;
 			return *(type_t*)(address);
 		}
 		template <class type_t>
 		bool Write(mem_t address, type_t value)
 		{
-			if (IsBadPointer((void*)address)) return false;
+			if (IsBadPointer((ptr_t)address)) return false;
 			*(type_t*)(address) = value;
 			return true;
 		}

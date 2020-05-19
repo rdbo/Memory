@@ -154,7 +154,7 @@ mem_t Memory::Ex::GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t>
 {
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 	mem_t addr = baseAddress;
-	for (unsigned int i = 0; i < offsets.size(); ++i)
+	for (size_t i = 0; i < offsets.size(); ++i)
 	{
 		addr += offsets[i];
 		ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(addr), 0);
@@ -162,13 +162,13 @@ mem_t Memory::Ex::GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t>
 	return addr;
 }
 //--------------------------------------------
-BOOL Memory::Ex::WriteBuffer(HANDLE hProc, mem_t address, const void* value, SIZE_T size)
+BOOL Memory::Ex::WriteBuffer(HANDLE hProc, mem_t address, const ptr_t value, SIZE_T size)
 {
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 	return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
 }
 //--------------------------------------------
-BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, void* buffer, SIZE_T size)
+BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, ptr_t buffer, SIZE_T size)
 {
 	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
 	return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
@@ -291,7 +291,7 @@ bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
 	return true;
 }
 //--------------------------------------------
-void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size)
+void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
@@ -302,7 +302,7 @@ void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const void* buf
 	CloseHandle(ntdll);
 }
 //--------------------------------------------
-void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size)
+void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
@@ -386,7 +386,7 @@ bool Memory::Ex::Zw::CloseProcessHandle(HANDLE hProcess)
 	return true;
 }
 //--------------------------------------------
-void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const void* buffer, size_t size)
+void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
@@ -397,7 +397,7 @@ void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const void* buf
 	CloseHandle(ntdll);
 }
 //--------------------------------------------
-void Memory::Ex::Zw::ReadBuffer(HANDLE hProcess, mem_t address, void* buffer, size_t size)
+void Memory::Ex::Zw::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
@@ -416,7 +416,7 @@ bool Memory::Ex::Injection::DLL::LoadLib(HANDLE hProc, str_t dllPath)
 {
 	if (dllPath.length() == 0 || hProc == INVALID_HANDLE_VALUE || hProc == 0) return false;
 
-	void* loc = VirtualAllocEx(hProc, 0, (dllPath.length() + 1) * sizeof(TCHAR), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	ptr_t loc = VirtualAllocEx(hProc, 0, (dllPath.length() + 1) * sizeof(TCHAR), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	if (loc == 0) return false;
 
 	if (!WriteProcessMemory(hProc, loc, dllPath.c_str(), (dllPath.length() + 1) * sizeof(TCHAR), 0)) return false;
@@ -433,12 +433,12 @@ bool Memory::Ex::Injection::DLL::LoadLib(HANDLE hProc, str_t dllPath)
 #endif //INCLUDE_EXTERNALS
 //Memory::In
 #if INCLUDE_INTERNALS
-void Memory::In::ZeroMem(void* src, size_t size)
+void Memory::In::ZeroMem(ptr_t src, size_t size)
 {
 	memset(src, 0x0, size);
 }
 //--------------------------------------------
-bool Memory::In::IsBadPointer(void* pointer)
+bool Memory::In::IsBadPointer(ptr_t pointer)
 {
 	MEMORY_BASIC_INFORMATION mbi = { 0 };
 	if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
@@ -477,7 +477,7 @@ mem_t Memory::In::GetModuleAddress(str_t moduleName)
 mem_t Memory::In::GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
 {
 	mem_t addr = baseAddress;
-	for (unsigned int i = 0; i < offsets.size(); ++i)
+	for (size_t i = 0; i < offsets.size(); ++i)
 	{
 		addr += offsets[i];
 		addr = *(mem_t*)addr;
@@ -485,12 +485,12 @@ mem_t Memory::In::GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
 	return addr;
 }
 //--------------------------------------------
-bool Memory::In::WriteBuffer(mem_t address, const void* value, SIZE_T size)
+bool Memory::In::WriteBuffer(mem_t address, const ptr_t value, SIZE_T size)
 {
 	DWORD oProtection;
 	if (VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oProtection))
 	{
-		memcpy((void*)(address), value, size);
+		memcpy((ptr_t)(address), value, size);
 		VirtualProtect((LPVOID)address, size, oProtection, NULL);
 		return true;
 	}
@@ -498,9 +498,9 @@ bool Memory::In::WriteBuffer(mem_t address, const void* value, SIZE_T size)
 	return false;
 }
 //--------------------------------------------
-bool Memory::In::ReadBuffer(mem_t address, void* buffer, SIZE_T size)
+bool Memory::In::ReadBuffer(mem_t address, ptr_t buffer, SIZE_T size)
 {
-	WriteBuffer((mem_t)buffer, (void*)address, size);
+	WriteBuffer((mem_t)buffer, (ptr_t)address, size);
 	return true;
 }
 //--------------------------------------------
@@ -562,7 +562,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	memcpy(bytes, src, size);
 	std::vector<byte_t> vbytes;
 	vbytes.reserve(size);
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
 		vbytes.insert(vbytes.begin() + i, bytes[i]);
 	}
@@ -590,18 +590,18 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 {
 	if (size < HOOK_MIN_SIZE) return 0;
-	void* gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	ptr_t gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	memcpy(gateway, src, size);
 #	if defined(ARCH_X86)
 	byte_t GatewayCodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
 	mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - HOOK_MIN_SIZE;
 	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP)) = jmpBack;
-	memcpy((void*)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
+	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
 #	elif defined(ARCH_X64)
 	mem_t jmpBack = (mem_t)src + size;
 	byte_t GatewayCodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
 	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOV_RAX)) = jmpBack;
-	memcpy((void*)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
+	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
 #	endif
 	Detour(src, dst, size);
 	return (byte_t*)gateway;
@@ -706,7 +706,7 @@ mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 	return base;
 }
 //--------------------------------------------
-bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	if (size == 0 || buffer == 0 || pid == INVALID_PID) return false;
 
@@ -719,7 +719,7 @@ bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
 	return true;
 }
 //--------------------------------------------
-bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	if (size == 0 || value == 0 || pid == INVALID_PID) return false;
 
@@ -732,29 +732,29 @@ bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
 	return true;
 }
 //--------------------------------------------
-int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
 	dst.iov_base = buffer;
 	dst.iov_len = size;
-	src.iov_base = (void*)address;
+	src.iov_base = (ptr_t)address;
 	src.iov_len = size;
 	return process_vm_readv(pid, &dst, 1, &src, 1, 0);
 }
 //--------------------------------------------
-int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
 	src.iov_base = value;
 	src.iov_len = size;
-	dst.iov_base = (void*)address;
+	dst.iov_base = (ptr_t)address;
 	dst.iov_len = size;
 	return process_vm_writev(pid, &src, 1, &dst, 1, 0);
 }
 //--------------------------------------------
-void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t size)
+void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
 	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
@@ -766,7 +766,7 @@ void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, void* buffer, size_t
 	close(proc_mem);
 }
 //--------------------------------------------
-void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, void* value, size_t size)
+void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
 	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
@@ -811,7 +811,7 @@ bool Memory::Ex::IsProcessRunning(pid_t pid)
 
 #if INCLUDE_INTERNALS
 //Memory::In
-void Memory::In::ZeroMem(void* src, size_t size)
+void Memory::In::ZeroMem(ptr_t src, size_t size)
 {
 	memset(src, 0x0, size + 1);
 }
@@ -820,10 +820,10 @@ int Memory::In::ProtectMemory(mem_t address, size_t size, int protection)
 {
 	long pagesize = sysconf(_SC_PAGE_SIZE);
 	address = address - (address % pagesize);
-	return mprotect((void*)address, size, protection);
+	return mprotect((ptr_t)address, size, protection);
 }
 //--------------------------------------------
-bool Memory::In::IsBadPointer(void* pointer)
+bool Memory::In::IsBadPointer(ptr_t pointer)
 {
 	int fh = open((const char*)pointer, 0, 0);
 	int e = errno;
@@ -842,15 +842,15 @@ pid_t Memory::In::GetCurrentProcessID()
 	return getpid();
 }
 //--------------------------------------------
-bool Memory::In::ReadBuffer(mem_t address, void* buffer, size_t size)
+bool Memory::In::ReadBuffer(mem_t address, ptr_t buffer, size_t size)
 {
-	memcpy((void*)buffer, (void*)address, size);
+	memcpy((ptr_t)buffer, (ptr_t)address, size);
 	return true;
 }
 //--------------------------------------------
-bool Memory::In::WriteBuffer(mem_t address, void* value, size_t size)
+bool Memory::In::WriteBuffer(mem_t address, ptr_t value, size_t size)
 {
-	memcpy((void*)address, (void*)value, size);
+	memcpy((ptr_t)address, (ptr_t)value, size);
 	return true;
 }
 //--------------------------------------------
@@ -896,7 +896,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	memcpy(bytes, src, size);
 	std::vector<byte_t> vbytes;
 	vbytes.reserve(size);
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
 		vbytes.insert(vbytes.begin() + i, bytes[i]);
 	}
@@ -927,12 +927,12 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 	mem_t jmpBack = (mem_t)src - (mem_t)gateway - HOOK_MIN_SIZE;
 	byte_t GatewayCodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
 	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP)) = jmpBack;
-	memcpy((void*)((mem_t)gateway + size), (void*)GatewayCodeCave, sizeof(GatewayCodeCave));
+	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
 #	elif defined(ARCH_X64)
 	mem_t jmpBack = (mem_t)src + size;
 	byte_t GatewayCodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
 	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOV_RAX)) = jmpBack;
-	memcpy((void*)((mem_t)gateway + size), (void*)GatewayCodeCave, sizeof(GatewayCodeCave));
+	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
 #	endif
 	Detour(src, dst, size);
 	return gateway;
