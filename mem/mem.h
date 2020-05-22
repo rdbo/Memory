@@ -7,188 +7,21 @@
 
 //Usage notes
 //1. The pattern scan default format is 'x' for known byte and '?' for unknown byte.
+
 #pragma once
 //## Pre-Includes
 
 #define INCLUDE_EXTERNALS 1
 #define INCLUDE_INTERNALS 1
 
-//##Defines
-
-//OS
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
-#define WIN
-#elif defined(linux)
-#define LINUX
-#endif
-
-//Architecture
-#if defined(_M_IX86) || defined(__i386__)
-#define ARCH_X86
-#elif defined(_M_X64) || defined(__LP64__) || defined(_LP64)
-#define ARCH_X64
-#endif
-
-//Character Set
-#if defined(_UNICODE)
-#define UCS
-#else
-#define MBCS
-#endif
-
-//Memory
-#if defined(WIN) || defined(LINUX) //Check compatibility
-#define MEMORY
-#endif
-
-//Other
-#define BAD_RETURN 0
-
-#define BYTE_SIZE 1
-#if defined(ARCH_X86)
-#define HOOK_MIN_SIZE 5
-#elif defined(ARCH_X64)
-#define HOOK_MIN_SIZE 12
-#endif
-
-#define KNOWN_BYTE 'x'
-#define KNOWN_BYTE_UPPER 'X'
-#define UNKNOWN_BYTE '?'
-
-#define PAD_STR __pad
-#define CONCAT_STR(a, b) a##b
-#define CONCAT_STR_WRAPPER(a, b) CONCAT_STR(a, b)
-#define NEW_PAD(size) CONCAT_STR_WRAPPER(PAD_STR, __COUNTER__)[size]
-#define CREATE_UNION_MEMBER(type, varname, offset) struct { unsigned char NEW_PAD(offset); type varname; }
-
-#if defined(UCS)
-#define AUTO_STR(str) CONCAT_STR_WRAPPER(L, str)
-#elif defined(MBCS)
-#define AUTO_STR(str) str
-#endif
-
-//## Includes / types
-
-#include <iostream>
-#include <fstream>
-#include <map>
-#include <functional>
-
-//Windows
-#if defined(WIN)
-#include <iostream>
-#include <vector>
-#include <tchar.h>
-#include <Windows.h>
-#include <TlHelp32.h>
-#include <Psapi.h>
-typedef DWORD pid_t;
-//Linux
-#elif defined(LINUX)
-#include <sys/types.h>
-#include <dirent.h>
-#include <errno.h>
-#include <vector>
-#include <string>
-#include <string.h>
-#include <iostream>
-#include <fstream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/ptrace.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
-#include <sys/uio.h>
-#define INVALID_PID -1
-#define DEFAULT_BUFFER_SIZE 64
-#define MAX_BUFFER_SIZE 1024
-#define PROC_STR "/proc/%i"
-#define PROC_MAPS_STR "/proc/%i/maps"
-#define PROC_MEM_STR "/proc/%i/mem"
-#define EXECUTABLE_MEMORY_STR "r-xp"
-typedef char TCHAR;
-#endif
-
-typedef unsigned int mem_t;
-typedef void* ptr_t;
-typedef unsigned char byte_t;
-typedef TCHAR* tstr_t;
-typedef char* cstr_t;
-typedef std::basic_string<TCHAR> str_t;
-typedef std::vector<str_t> vstr_t;
-
-//## Nt / Zw
-#if defined(WIN)
-#define NTDLL_NAME AUTO_STR("ntdll.dll")
-#define NTGETNEXTPROCESS_STR "NtGetNextProcess"
-#define NTOPENPROCESS_STR "NtOpenProcess"
-#define NTCLOSE_STR "NtClose"
-#define NTREADVIRTUALMEMORY_STR "NtReadVirtualMemory"
-#define NTWRITEVIRTUALMEMORY_STR "NtWriteVirtualMemory"
-
-#define ZWGETNEXTPROCESS_STR "ZwGetNextProcess"
-#define ZWOPENPROCESS_STR "ZwOpenProcess"
-#define ZWCLOSE_STR "ZwClose"
-#define ZWREADVIRTUALMEMORY_STR "ZwReadVirtualMemory"
-#define ZWWRITEVIRTUALMEMORY_STR "ZwWriteVirtualMemory"
-
-//## Nt / Zw Definitions
-typedef struct _UNICODE_STRING
-{
-	USHORT Length;
-	USHORT MaximumLength;
-	PWSTR Buffer;
-} UNICODE_STRING, * PUNICODE_STRING, ** PPUNICODE_STRING;
-
-typedef struct _OBJECT_ATTRIBUTES
-{
-	ULONG Length;
-	HANDLE RootDirectory;
-	PUNICODE_STRING ObjectName;
-	ULONG Attributes;
-	PVOID SecurityDescriptor;        // SECURITY_DESCRIPTOR
-	PVOID SecurityQualityOfService;  // SECURITY_QUALITY_OF_SERVICE
-} OBJECT_ATTRIBUTES;
-typedef OBJECT_ATTRIBUTES* POBJECT_ATTRIBUTES;
-
-typedef struct _CLIENT_ID
-{
-	HANDLE UniqueProcess;
-	HANDLE UniqueThread;
-} CLIENT_ID, * PCLIENT_ID;
-
-//## Nt / Zw Functions
-typedef NTSTATUS(NTAPI* NtGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
-typedef NTSTATUS(NTAPI* NtOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
-typedef NTSTATUS(NTAPI* NtClose_t)(HANDLE Handle);
-typedef NTSTATUS(NTAPI* NtReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
-typedef NTSTATUS(NTAPI* NtWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const ptr_t Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
-
-typedef NTSTATUS(NTAPI* ZwGetNextProcess_t)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttributes, _In_ ULONG Flags, _Out_ PHANDLE NewProcessHandle);
-typedef NTSTATUS(NTAPI* ZwOpenProcess_t)(PHANDLE ProcessHandle, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PCLIENT_ID ClientId);
-typedef NTSTATUS(NTAPI* ZwClose_t)(HANDLE Handle);
-typedef NTSTATUS(NTAPI* ZwReadVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, PVOID Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesRead);
-typedef NTSTATUS(NTAPI* ZwWriteVirtualMemory_t)(HANDLE ProcessHandle, PVOID BaseAddress, const ptr_t Buffer, SIZE_T BufferSize, PSIZE_T NumberOfBytesWritten);
-#endif
-//## Assembly Instructions
-
-#if defined(ARCH_X86)
-
-const byte_t JMP = 0xE9;
-
-#elif defined(ARCH_X64)
-
-const byte_t MOV_RAX[] = { 0x48, 0xB8 };
-const byte_t JMP_RAX[] = { 0xFF, 0xE0 };
-
-#endif
+#include "defines.h"
+#include "types.h"
+#include "includes.h"
+#include "dependencies.h"
 
 //## Memory Namespace
 
-#if defined(MEMORY) && defined(WIN)
+#if defined(WIN)
 
 namespace Memory
 {
@@ -245,7 +78,7 @@ namespace Memory
 			}
 		}
 	}
-#	endif
+#	endif //INCLUDE_EXTERNALS
 
 #	if INCLUDE_INTERNALS
 	namespace In
@@ -281,14 +114,15 @@ namespace Memory
 			byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
 		}
 	}
-#	endif
+#	endif //INCLUDE_INTERNALS
 }
 
 //============================================
 //============================================
 //============================================
 
-#elif defined(MEMORY) && defined(LINUX)
+//Linux
+#elif defined(LINUX)
 
 namespace Memory
 {
@@ -340,7 +174,11 @@ namespace Memory
 			byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
 		}
 	}
-#	endif
+#	endif //Internals
 }
 
+#endif //Linux
+
+#ifndef MEMORY
+#define MEMORY
 #endif

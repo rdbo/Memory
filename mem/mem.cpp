@@ -554,7 +554,7 @@ bool Memory::In::Hook::Restore(mem_t address)
 //--------------------------------------------
 bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 {
-	if (size < HOOK_MIN_SIZE) return false;
+	if (size < JUMP_LENGTH) return false;
 
 	//Save stolen bytes
 	byte_t* bytes = new byte_t[size];
@@ -572,15 +572,15 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	DWORD  oProtect;
 	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
 #	if defined(ARCH_X86)
-	byte_t CodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
-	mem_t  jmpAddr = (mem_t)(dst - (mem_t)src) - HOOK_MIN_SIZE;
-	*(mem_t*)((mem_t)CodeCave + sizeof(JMP)) = jmpAddr;
+	byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
+	mem_t  jmpAddr = (mem_t)(dst - (mem_t)src) - JUMP_LENGTH;
+	*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
 	memcpy(src, CodeCave, sizeof(CodeCave));
 
 #	elif defined(ARCH_X64)
-	byte_t CodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
+	byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
 	mem_t jmpAddr = (mem_t)dst;
-	*(mem_t*)((mem_t)CodeCave + sizeof(MOV_RAX)) = jmpAddr;
+	*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
 	memcpy(src, CodeCave, sizeof(CodeCave));
 #	endif
 	VirtualProtect(src, size, oProtect, &oProtect);
@@ -589,18 +589,18 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 //--------------------------------------------
 byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 {
-	if (size < HOOK_MIN_SIZE) return 0;
-	ptr_t gateway = VirtualAlloc(0, size + HOOK_MIN_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (size < JUMP_LENGTH) return 0;
+	ptr_t gateway = VirtualAlloc(0, size + JUMP_LENGTH, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	memcpy(gateway, src, size);
 #	if defined(ARCH_X86)
-	byte_t GatewayCodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
-	mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - HOOK_MIN_SIZE;
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP)) = jmpBack;
+	byte_t GatewayCodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
+	mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - JUMP_LENGTH;
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP_OP)) = jmpBack;
 	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
 #	elif defined(ARCH_X64)
 	mem_t jmpBack = (mem_t)src + size;
-	byte_t GatewayCodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOV_RAX)) = jmpBack;
+	byte_t GatewayCodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOVABS_RAX_OP)) = jmpBack;
 	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
 #	endif
 	Detour(src, dst, size);
@@ -887,7 +887,7 @@ bool Memory::In::Hook::Restore(mem_t address)
 //--------------------------------------------
 bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 {
-	if (size < HOOK_MIN_SIZE) return false;
+	if (size < JUMP_LENGTH) return false;
 	if (ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
 
 	//Save stolen bytes
@@ -904,14 +904,14 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 
 	//Detour
 #	if defined(ARCH_X86)
-	mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - HOOK_MIN_SIZE;
-	byte_t CodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
-	*(mem_t*)((mem_t)CodeCave + sizeof(JMP)) = jmpAddr;
+	mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
+	byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
+	*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
 	memcpy(src, CodeCave, sizeof(CodeCave));
 #	elif defined(ARCH_X64)
 	mem_t jmpAddr = (mem_t)dst;
-	byte_t CodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
-	*(mem_t*)((mem_t)CodeCave + sizeof(MOV_RAX)) = jmpAddr;
+	byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
+	*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
 	memcpy(src, CodeCave, sizeof(CodeCave));
 #	endif
 	return true;
@@ -919,19 +919,19 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 //--------------------------------------------
 byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 {
-	if (size < HOOK_MIN_SIZE) return 0;
-	byte_t* gateway = new byte_t[size + HOOK_MIN_SIZE];
-	ProtectMemory((mem_t)gateway, size + HOOK_MIN_SIZE, PROT_EXEC | PROT_READ | PROT_WRITE);
+	if (size < JUMP_LENGTH) return 0;
+	byte_t* gateway = new byte_t[size + JUMP_LENGTH];
+	ProtectMemory((mem_t)gateway, size + JUMP_LENGTH, PROT_EXEC | PROT_READ | PROT_WRITE);
 	memcpy(gateway, src, size);
 #	if defined(ARCH_X86)
-	mem_t jmpBack = (mem_t)src - (mem_t)gateway - HOOK_MIN_SIZE;
-	byte_t GatewayCodeCave[] = { JMP, 0x0, 0x0, 0x0, 0x0 };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP)) = jmpBack;
+	mem_t jmpBack = (mem_t)src - (mem_t)gateway - JUMP_LENGTH;
+	byte_t GatewayCodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP_OP)) = jmpBack;
 	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
 #	elif defined(ARCH_X64)
 	mem_t jmpBack = (mem_t)src + size;
-	byte_t GatewayCodeCave[] = { MOV_RAX[0], MOV_RAX[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX[0], JMP_RAX[1] };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOV_RAX)) = jmpBack;
+	byte_t GatewayCodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
+	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOVABS_RAX_OP)) = jmpBack;
 	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
 #	endif
 	Detour(src, dst, size);
