@@ -40,7 +40,7 @@ Memory::Ex::Zw::CloseProcessHandle
 Memory::Ex::Zw::WriteBuffer
 Memory::Ex::Zw::ReadBuffer
 
-Memory::Ex::Injection::DLL::LoadLib
+Memory::Ex::DLL::LoadLib
 
 Memory::In::ZeroMem
 Memory::In::IsBadPointer
