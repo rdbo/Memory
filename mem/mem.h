@@ -202,7 +202,7 @@ namespace Memory
 	extern HWND g_hWnd;
 	//Helper Functions
 	BOOL CALLBACK EnumWindowsCallback(HWND hWnd, LPARAM lParam);
-	char* ParseMask(char* mask);
+	cstr_t ParseMask(cstr_t mask);
 #	if INCLUDE_EXTERNALS
 	namespace Ex
 	{
@@ -220,8 +220,8 @@ namespace Memory
 		BOOL WriteBuffer(HANDLE hProc, mem_t address, const ptr_t value, SIZE_T size);
 		BOOL ReadBuffer(HANDLE hProc, mem_t address, ptr_t buffer, SIZE_T size);
 		MODULEINFO GetModuleInfo(HANDLE hProcess, str_t moduleName);
-		mem_t PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
-		mem_t PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, char* mask);
+		mem_t PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);
+		mem_t PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, cstr_t mask);
 
 		namespace Nt
 		{
@@ -263,8 +263,8 @@ namespace Memory
 		bool WriteBuffer(mem_t address, const ptr_t value, SIZE_T size);
 		bool ReadBuffer(mem_t address, ptr_t buffer, SIZE_T size);
 		MODULEINFO GetModuleInfo(str_t moduleName);
-		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);;
-		mem_t PatternScanModule(str_t moduleName, byte_t* pattern, char* mask);
+		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);;
+		mem_t PatternScanModule(str_t moduleName, byte_t* pattern, cstr_t mask);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
@@ -296,7 +296,7 @@ namespace Memory
 
 namespace Memory
 {
-	char* ParseMask(char* mask);
+	cstr_t ParseMask(cstr_t mask);
 #	if INCLUDE_EXTERNALS
 	namespace Ex
 	{
@@ -308,7 +308,7 @@ namespace Memory
 		int VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
 		void PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
 		void PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
-		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask);
+		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);
 		bool IsProcessRunning(pid_t pid);
 	}
 #	endif //INCLUDE_EXTERNALS
@@ -321,7 +321,7 @@ namespace Memory
 		pid_t GetCurrentProcessID();
 		bool ReadBuffer(mem_t address, ptr_t buffer, size_t size);
 		bool WriteBuffer(mem_t address, ptr_t value, size_t size);
-		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask);
+		mem_t PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);
 		template <class type_t>
 		type_t Read(mem_t address)
 		{
@@ -340,8 +340,8 @@ namespace Memory
 		{
 			extern std::map<mem_t, std::vector<byte_t>> restore_arr;
 			bool Restore(mem_t address);
-			bool Detour(byte_t* src, byte_t* dst, size_t size);
-			byte_t* TrampolineHook(byte_t* src, byte_t* dst, size_t size);
+			bool Detour(ptr_t src, ptr_t dst, size_t size);
+			byte_t* TrampolineHook(ptr_t src, ptr_t dst, size_t size);
 		}
 	}
 #	endif //Internals

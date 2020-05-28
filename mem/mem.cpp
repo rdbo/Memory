@@ -883,7 +883,7 @@ bool Memory::In::Hook::Restore(mem_t address)
 	return true;
 }
 //--------------------------------------------
-bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
+bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size)
 {
 	if (size < JUMP_LENGTH) return false;
 	if (ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
@@ -915,7 +915,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	return true;
 }
 //--------------------------------------------
-byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
+byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size)
 {
 	if (size < JUMP_LENGTH) return 0;
 	byte_t* gateway = new byte_t[size + JUMP_LENGTH];
