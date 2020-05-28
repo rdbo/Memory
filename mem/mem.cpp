@@ -15,7 +15,7 @@ BOOL CALLBACK Memory::EnumWindowsCallback(HWND hWnd, LPARAM lParam)
 	return FALSE;
 }
 
-char* Memory::ParseMask(char* mask)
+cstr_t Memory::ParseMask(cstr_t mask)
 {
 	size_t length = strlen(mask);
 	for (size_t i = 0; i < length; i++)
@@ -185,7 +185,7 @@ MODULEINFO Memory::Ex::GetModuleInfo(HANDLE hProcess, str_t moduleName)
 	return modInfo;
 }
 //--------------------------------------------
-mem_t Memory::Ex::PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask)
+mem_t Memory::Ex::PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
 {
 	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
 	mask = ParseMask(mask);
@@ -207,7 +207,7 @@ mem_t Memory::Ex::PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, b
 	return 0;
 }
 //--------------------------------------------
-mem_t Memory::Ex::PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, char* mask)
+mem_t Memory::Ex::PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, cstr_t mask)
 {
 	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
 	MODULEINFO modInfo = GetModuleInfo(hProcess, moduleName);
@@ -223,7 +223,7 @@ HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
-	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NTGETNEXTPROCESS_STR);
+	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(GETNEXTPROCESS_STR));
 	if (!NtGetNextProcess) return INVALID_HANDLE_VALUE;
 
 	HANDLE hProcess = 0;
@@ -243,7 +243,7 @@ pid_t Memory::Ex::Nt::GetProcessID(str_t processName)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return 0;
-	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NTGETNEXTPROCESS_STR);
+	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(GETNEXTPROCESS_STR));
 	if (!NtGetNextProcess) return 0;
 
 	HANDLE hProcess = 0;
@@ -267,7 +267,7 @@ HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
-	NtOpenProcess_t NtOpenProcess = (NtOpenProcess_t)GetProcAddress(ntdll, NTOPENPROCESS_STR);
+	NtOpenProcess_t NtOpenProcess = (NtOpenProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(OPENPROCESS_STR));
 	if (!NtOpenProcess) return INVALID_HANDLE_VALUE;
 
 	HANDLE hProcess = 0;
@@ -283,7 +283,7 @@ bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return false;
-	NtClose_t NtClose = (NtClose_t)GetProcAddress(ntdll, NTCLOSE_STR);
+	NtClose_t NtClose = (NtClose_t)GetProcAddress(ntdll, NT_FUNCTION_STR(CLOSE_STR));
 	if (!NtClose) return false;
 
 	NtClose(hProcess);
@@ -295,7 +295,7 @@ void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buf
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
-	NtWriteVirtualMemory_t NtWriteVirtualMemory = (NtWriteVirtualMemory_t)GetProcAddress(ntdll, NTWRITEVIRTUALMEMORY_STR);
+	NtWriteVirtualMemory_t NtWriteVirtualMemory = (NtWriteVirtualMemory_t)GetProcAddress(ntdll, NT_FUNCTION_STR(WRITEVIRTUALMEMORY_STR));
 	if (!NtWriteVirtualMemory) return;
 
 	NtWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
@@ -306,7 +306,7 @@ void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, si
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
-	NtReadVirtualMemory_t NtReadVirtualMemory = (NtReadVirtualMemory_t)GetProcAddress(ntdll, NTREADVIRTUALMEMORY_STR);
+	NtReadVirtualMemory_t NtReadVirtualMemory = (NtReadVirtualMemory_t)GetProcAddress(ntdll, NT_FUNCTION_STR(READVIRTUALMEMORY_STR));
 	if (!NtReadVirtualMemory) return;
 
 	NtReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
@@ -318,7 +318,7 @@ HANDLE Memory::Ex::Zw::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
-	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZWGETNEXTPROCESS_STR);
+	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(GETNEXTPROCESS_STR));
 	if (!ZwGetNextProcess) return INVALID_HANDLE_VALUE;
 
 	HANDLE hProcess = 0;
@@ -338,7 +338,7 @@ pid_t Memory::Ex::Zw::GetProcessID(str_t processName)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return 0;
-	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZWGETNEXTPROCESS_STR);
+	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(GETNEXTPROCESS_STR));
 	if (!ZwGetNextProcess) return 0;
 
 	HANDLE hProcess = 0;
@@ -362,7 +362,7 @@ HANDLE Memory::Ex::Zw::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return INVALID_HANDLE_VALUE;
-	ZwOpenProcess_t ZwOpenProcess = (ZwOpenProcess_t)GetProcAddress(ntdll, ZWOPENPROCESS_STR);
+	ZwOpenProcess_t ZwOpenProcess = (ZwOpenProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(OPENPROCESS_STR));
 	if (!ZwOpenProcess) return INVALID_HANDLE_VALUE;
 
 	HANDLE hProcess = 0;
@@ -378,7 +378,7 @@ bool Memory::Ex::Zw::CloseProcessHandle(HANDLE hProcess)
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return false;
-	ZwClose_t ZwClose = (ZwClose_t)GetProcAddress(ntdll, ZWCLOSE_STR);
+	ZwClose_t ZwClose = (ZwClose_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(CLOSE_STR));
 	if (!ZwClose) return false;
 
 	ZwClose(hProcess);
@@ -390,7 +390,7 @@ void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buf
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
-	ZwWriteVirtualMemory_t ZwWriteVirtualMemory = (ZwWriteVirtualMemory_t)GetProcAddress(ntdll, ZWWRITEVIRTUALMEMORY_STR);
+	ZwWriteVirtualMemory_t ZwWriteVirtualMemory = (ZwWriteVirtualMemory_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(WRITEVIRTUALMEMORY_STR));
 	if (!ZwWriteVirtualMemory) return;
 
 	ZwWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
@@ -401,18 +401,16 @@ void Memory::Ex::Zw::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, si
 {
 	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
 	if (!ntdll) return;
-	ZwReadVirtualMemory_t ZwReadVirtualMemory = (ZwReadVirtualMemory_t)GetProcAddress(ntdll, ZWREADVIRTUALMEMORY_STR);
+	ZwReadVirtualMemory_t ZwReadVirtualMemory = (ZwReadVirtualMemory_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(READVIRTUALMEMORY_STR));
 	if (!ZwReadVirtualMemory) return;
 
 	ZwReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
 	CloseHandle(ntdll);
 }
 
-//Memory::Ex::Injection
+//Memory::Ex::DLL
 
-//Memory::Ex::Injection::DLL
-
-bool Memory::Ex::Injection::DLL::LoadLib(HANDLE hProc, str_t dllPath)
+bool Memory::Ex::DLL::LoadLib(HANDLE hProc, str_t dllPath)
 {
 	if (dllPath.length() == 0 || hProc == INVALID_HANDLE_VALUE || hProc == 0) return false;
 
@@ -513,7 +511,7 @@ MODULEINFO Memory::In::GetModuleInfo(str_t moduleName)
 	return modInfo;
 }
 //--------------------------------------------
-mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask)
+mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
 {
 	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
@@ -532,7 +530,7 @@ mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, ch
 	return 0;
 }
 //--------------------------------------------
-mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, char* mask)
+mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, cstr_t mask)
 {
 	MODULEINFO modInfo = GetModuleInfo(moduleName);
 	size_t patternLength = strlen(mask);
@@ -552,7 +550,7 @@ bool Memory::In::Hook::Restore(mem_t address)
 	return true;
 }
 //--------------------------------------------
-bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
+bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size)
 {
 	if (size < JUMP_LENGTH) return false;
 
@@ -573,7 +571,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
 #	if defined(ARCH_X86)
 	byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-	mem_t  jmpAddr = (mem_t)(dst - (mem_t)src) - JUMP_LENGTH;
+	mem_t  jmpAddr = (mem_t)((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
 	*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
 	memcpy(src, CodeCave, sizeof(CodeCave));
 
@@ -587,7 +585,7 @@ bool Memory::In::Hook::Detour(byte_t* src, byte_t* dst, size_t size)
 	return true;
 }
 //--------------------------------------------
-byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
+byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size)
 {
 	if (size < JUMP_LENGTH) return 0;
 	ptr_t gateway = VirtualAlloc(0, size + JUMP_LENGTH, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -617,7 +615,7 @@ byte_t* Memory::In::Hook::TrampolineHook(byte_t* src, byte_t* dst, size_t size)
 
 //Memory
 //Helper functions
-char* Memory::ParseMask(char* mask)
+cstr_t Memory::ParseMask(cstr_t mask)
 {
 	size_t length = strlen(mask);
 	for (size_t i = 0; i < length; i++)
@@ -778,7 +776,7 @@ void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t
 	close(proc_mem);
 }
 //--------------------------------------------
-mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, char* mask)
+mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
 {
 	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
@@ -854,7 +852,7 @@ bool Memory::In::WriteBuffer(mem_t address, ptr_t value, size_t size)
 	return true;
 }
 //--------------------------------------------
-mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, char* mask)
+mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
 {
 	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
