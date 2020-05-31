@@ -69,10 +69,10 @@ Memory::Ex::GetProcessIdByName
 Memory::Ex::GetModuleAddress
 Memory::Ex::ReadBuffer
 Memory::Ex::WriteBuffer
-Memory::Ex::VmReadBuffer
-Memory::Ex::VmWriteBuffer
-Memory::Ex::PtraceReadBuffer
-Memory::Ex::PtraceWriteBuffer
+Memory::Ex::Vm::ReadBuffer
+Memory::Ex::Vm::WriteBuffer
+Memory::Ex::Ptrace::ReadBuffer
+Memory::Ex::Ptrace::WriteBuffer
 Memory::Ex::PatternScan
 Memory::Ex::IsProcessRunning
 
