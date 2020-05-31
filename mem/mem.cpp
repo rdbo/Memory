@@ -730,7 +730,7 @@ bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 	return true;
 }
 //--------------------------------------------
-int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
+int Memory::Ex::Vm::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
@@ -741,7 +741,7 @@ int Memory::Ex::VmReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size
 	return process_vm_readv(pid, &dst, 1, &src, 1, 0);
 }
 //--------------------------------------------
-int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
+int Memory::Ex::Vm::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
@@ -752,7 +752,7 @@ int Memory::Ex::VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size
 	return process_vm_writev(pid, &src, 1, &dst, 1, 0);
 }
 //--------------------------------------------
-void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
+void Memory::Ex::Ptrace::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
 	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
@@ -764,7 +764,7 @@ void Memory::Ex::PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t
 	close(proc_mem);
 }
 //--------------------------------------------
-void Memory::Ex::PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
+void Memory::Ex::Ptrace::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	char path_buffer[DEFAULT_BUFFER_SIZE];
 	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);

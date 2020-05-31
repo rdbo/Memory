@@ -304,12 +304,19 @@ namespace Memory
 		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
 		bool ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
 		bool WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
-		int VmReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
-		int VmWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
-		void PtraceReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
-		void PtraceWriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
 		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);
 		bool IsProcessRunning(pid_t pid);
+		namespace Ptrace
+		{
+			void ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
+			void WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
+		}
+
+		namespace Vm
+		{
+			int ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
+			int WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
+		}
 	}
 #	endif //INCLUDE_EXTERNALS
 #	if INCLUDE_INTERNALS
