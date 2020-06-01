@@ -704,33 +704,79 @@ mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
 	return base;
 }
 //--------------------------------------------
-bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
+bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size, API method)
 {
-	if (size == 0 || buffer == 0 || pid == INVALID_PID) return false;
+	switch(method)
+	{
+		case API::Default:
+		{
+			if (size == 0 || buffer == 0 || pid == INVALID_PID) return false;
+			char path_buffer[DEFAULT_BUFFER_SIZE];
+			snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
 
-	char path_buffer[DEFAULT_BUFFER_SIZE];
-	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+			int proc_mem = open(path_buffer, O_RDONLY);
+			lseek(proc_mem, address, SEEK_SET);
+			read(proc_mem, buffer, size);
+			return true;
+		}
+		break;
 
-	int proc_mem = open(path_buffer, O_RDONLY);
-	lseek(proc_mem, address, SEEK_SET);
-	read(proc_mem, buffer, size);
-	return true;
+		case API::VM:
+		{
+			VM::ReadBuffer(pid, address, buffer, size);
+		}
+		break;
+
+		case API::Ptrace:
+		{
+			Ptrace::ReadBuffer(pid, address, buffer, size);
+		}
+		break;
+
+		default:
+		break;
+	}
+	return false;
 }
 //--------------------------------------------
-bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
+bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size, API method)
 {
-	if (size == 0 || value == 0 || pid == INVALID_PID) return false;
+	switch(method)
+	{
+		case API::Default:
+		{
+			if (size == 0 || value == 0 || pid == INVALID_PID) return false;
 
-	char path_buffer[DEFAULT_BUFFER_SIZE];
-	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
+			char path_buffer[DEFAULT_BUFFER_SIZE];
+			snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
 
-	int proc_mem = open(path_buffer, O_WRONLY);
-	lseek(proc_mem, address, SEEK_SET);
-	write(proc_mem, value, size);
-	return true;
+			int proc_mem = open(path_buffer, O_WRONLY);
+			lseek(proc_mem, address, SEEK_SET);
+			write(proc_mem, value, size);
+			return true;
+		}
+		break;
+
+		case API::VM:
+		{
+			return (bool)VM::WriteBuffer(pid, address, value, size);
+		}
+		break;
+
+		case API::Ptrace:
+		{
+			Ptrace::WriteBuffer(pid, address, value, size);
+			return true;
+		}
+		break;
+
+		default:
+		break;
+	}
+	return false;
 }
 //--------------------------------------------
-int Memory::Ex::Vm::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
+int Memory::Ex::VM::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
@@ -741,7 +787,7 @@ int Memory::Ex::Vm::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t si
 	return process_vm_readv(pid, &dst, 1, &src, 1, 0);
 }
 //--------------------------------------------
-int Memory::Ex::Vm::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
+int Memory::Ex::VM::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
 {
 	struct iovec src;
 	struct iovec dst;
@@ -776,7 +822,7 @@ void Memory::Ex::Ptrace::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size
 	close(proc_mem);
 }
 //--------------------------------------------
-mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
+mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask, API method)
 {
 	mask = ParseMask(mask);
 	size_t patternLength = strlen(mask);
@@ -787,7 +833,7 @@ mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t*
 		for (size_t j = 0; j < patternLength; j++)
 		{
 			byte_t curByte;
-			ReadBuffer(pid, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte));
+			ReadBuffer(pid, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte), method);
 			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == curByte;
 		}
 

@@ -1,3 +1,7 @@
+#ifndef linux
+#define linux
+#endif
+
 //Made by rdbo
 //Repository: https://github.com/rdbo/Memory
 //Notes
@@ -300,11 +304,16 @@ namespace Memory
 #	if INCLUDE_EXTERNALS
 	namespace Ex
 	{
+		enum class API
+		{
+			Default, VM, Ptrace
+		};
+
 		pid_t GetProcessIdByName(str_t processName);
 		mem_t GetModuleAddress(pid_t pid, str_t moduleName);
-		bool ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
-		bool WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
-		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask);
+		bool ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size, API method = API::Default);
+		bool WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size, API method =  API::Default);
+		mem_t PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask, API method = API::Default);
 		bool IsProcessRunning(pid_t pid);
 		namespace Ptrace
 		{
@@ -312,7 +321,7 @@ namespace Memory
 			void WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);
 		}
 
-		namespace Vm
+		namespace VM
 		{
 			int ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size);
 			int WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size);

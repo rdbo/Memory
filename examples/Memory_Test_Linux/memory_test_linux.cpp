@@ -41,8 +41,8 @@ bool TestBuffer(pid_t pid)
     Memory::Ex::Ptrace::WriteBuffer(pid, (mem_t)&buffer, new int(NEW_VALUE * MULT), sizeof(NEW_VALUE * MULT));
 
     int vm_read_buffer;
-    Memory::Ex::Vm::ReadBuffer(pid, (mem_t)&buffer, &vm_read_buffer, sizeof(vm_read_buffer));
-    Memory::Ex::Vm::WriteBuffer(pid, (mem_t)&buffer, new int(NEW_VALUE * MULT * MULT), sizeof(NEW_VALUE * MULT));
+    Memory::Ex::VM::ReadBuffer(pid, (mem_t)&buffer, &vm_read_buffer, sizeof(vm_read_buffer));
+    Memory::Ex::VM::WriteBuffer(pid, (mem_t)&buffer, new int(NEW_VALUE * MULT * MULT), sizeof(NEW_VALUE * MULT));
 
     std::cout << "Read Buffer: " << read_buffer << std::endl;
     std::cout << "Ptrace Read Buffer: " << ptrace_read_buffer << std::endl;
