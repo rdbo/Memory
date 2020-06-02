@@ -1,7 +1,3 @@
-#ifndef linux
-#define linux
-#endif
-
 //Made by rdbo
 //Repository: https://github.com/rdbo/Memory
 //Notes
