@@ -8,10 +8,16 @@
 #define NEW_VALUE 250
 #define MULT 2
 #if defined(ARCH_X86)
-#define HOOK_LENGTH 5
+#define HOOK_LENGTH 10 //mJump0
+//#define HOOK_LENGTH 10 //mJump1
+//#define HOOK_LENGTH 10 //mPush0
 #elif defined(ARCH_X64)
-#define HOOK_LENGTH 12
+#define HOOK_LENGTH 12 //mJump0
+//#define HOOK_LENGTH 12 //mPush0
 #endif
+
+using Memory::Ex::API;
+API method = API::Default;
 
 int buffer = DEFAULT_VALUE;
 byte_t pattern[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -33,8 +39,8 @@ bool TestPID(pid_t& pid)
 bool TestBuffer(pid_t pid)
 {
     int read_buffer;
-    Memory::Ex::ReadBuffer(pid, (mem_t)&buffer, &read_buffer, sizeof(read_buffer));
-    Memory::Ex::WriteBuffer(pid, (mem_t)&buffer, new int(NEW_VALUE), sizeof(NEW_VALUE));
+    Memory::Ex::ReadBuffer(pid, (mem_t)&buffer, &read_buffer, sizeof(read_buffer), method);
+    Memory::Ex::WriteBuffer(pid, (mem_t)&buffer, new int(NEW_VALUE), sizeof(NEW_VALUE), method);
 
     int ptrace_read_buffer;
     Memory::Ex::Ptrace::ReadBuffer(pid, (mem_t)&buffer, &ptrace_read_buffer, sizeof(ptrace_read_buffer));
@@ -87,7 +93,7 @@ bool hkTestHook(bool check)
 int main()
 {
     pid_t pid;
-    oTestHook = (TestHook_t)Memory::In::Hook::TrampolineHook((ptr_t)&TestHook, (ptr_t)&hkTestHook, HOOK_LENGTH);
+    oTestHook = (TestHook_t)Memory::In::Hook::TrampolineHook((ptr_t)&TestHook, (ptr_t)&hkTestHook, HOOK_LENGTH, Memory::In::Hook::hMethod::mJump0);
     bool bTestPid = TestPID(pid);
     bool bTestBuffer = TestBuffer(pid);
     bool bTestScan = TestScan(pid);

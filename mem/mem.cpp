@@ -920,6 +920,12 @@ mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cs
 //Memory::In::Hook
 
 std::map<mem_t, std::vector<byte_t>> Memory::In::Hook::restore_arr;
+std::map<Memory::In::Hook::hMethod, size_t> Memory::In::Hook::hook_length_arr =
+{
+	{ hMethod::mJump0, sizeof(MOVABS_RAX_OP) + sizeof(EMPTY_AWORD) + sizeof(JMP_RAX_OP) },
+	{ hMethod::mJump1, sizeof(JMP_OP) + sizeof(EMPTY_DWORD) },
+	{ hMethod::mPush0, sizeof(MOVABS_RAX_OP) + sizeof(EMPTY_AWORD) + sizeof(PUSH_RAX_OP) + sizeof(RET_OP) }
+};
 
 bool Memory::In::Hook::Restore(mem_t address)
 {
@@ -929,7 +935,7 @@ bool Memory::In::Hook::Restore(mem_t address)
 	return true;
 }
 //--------------------------------------------
-bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size)
+bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size, hMethod method)
 {
 	if (size < JUMP_LENGTH) return false;
 	if (ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
@@ -947,21 +953,53 @@ bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size)
 	restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
 
 	//Detour
-#	if defined(ARCH_X86)
-	mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
-	byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-	*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
-	memcpy(src, CodeCave, sizeof(CodeCave));
-#	elif defined(ARCH_X64)
-	mem_t jmpAddr = (mem_t)dst;
-	byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-	*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
-	memcpy(src, CodeCave, sizeof(CodeCave));
-#	endif
+
+	switch(method)
+	{
+		case hMethod::mJump0:
+		{
+			mem_t jmpAddr = (mem_t)dst;
+#			if defined(ARCH_X86)
+			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
+#			elif defined(ARCH_X64)
+			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
+#			endif
+			*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
+			memcpy(src, CodeCave, sizeof(CodeCave));
+		}
+		break;
+
+		case hMethod::mJump1:
+		{
+			mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
+			byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
+			*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
+			memcpy(src, CodeCave, sizeof(CodeCave));
+		}
+		break;
+
+		case hMethod::mPush0:
+		{
+			mem_t pushAddr = (mem_t)dst;
+#			if defined(ARCH_X86)
+			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, PUSH_RAX_OP[0], RET_OP[0] };
+#			elif defined(ARCH_X64)
+			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, PUSH_RAX_OP[0], RET_OP[0] };
+#			endif
+			*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = pushAddr;
+			memcpy(src, CodeCave, sizeof(CodeCave));
+		}
+		break;
+
+		default:
+		return false;
+		break;
+	}
+
 	return true;
 }
 //--------------------------------------------
-byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size)
+byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size, hMethod method)
 {
 	if (size < JUMP_LENGTH) return 0;
 	byte_t* gateway = new byte_t[size + JUMP_LENGTH];
@@ -978,7 +1016,7 @@ byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size)
 	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOVABS_RAX_OP)) = jmpBack;
 	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
 #	endif
-	Detour(src, dst, size);
+	Detour(src, dst, size, method);
 	return gateway;
 }
 #endif //INCLUDE_INTERNALS

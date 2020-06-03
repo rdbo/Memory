@@ -64,9 +64,16 @@
 //Assembly Operations
 const unsigned char JMP_OP = 0xE9;
 const unsigned char MOVABS_RAX_OP[] = { 0x48, 0xB8 };
+const unsigned char PUSH_RAX_OP[] = { 0x50 };
+const unsigned char RET_OP[] = { 0xC3 };
 const unsigned char JMP_RAX_OP[] = { 0xFF, 0xE0 };
 const unsigned char EMPTY_DWORD[] = { 0x0, 0x0, 0x0, 0x0 };
 const unsigned char EMPTY_QWORD[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+#if defined(ARCH_X86)
+#define EMPTY_AWORD EMPTY_DWORD
+#elif defined(ARCH_X64)
+#define EMPTY_AWORD EMPTY_QWORD
+#endif
 
 //Other
 
@@ -350,10 +357,18 @@ namespace Memory
 
 		namespace Hook
 		{
+			enum class hMethod
+			{
+				mJump0,
+				mJump1,
+				mPush0
+			};
+
 			extern std::map<mem_t, std::vector<byte_t>> restore_arr;
+			extern std::map<hMethod, size_t> hook_length_arr;
 			bool Restore(mem_t address);
-			bool Detour(ptr_t src, ptr_t dst, size_t size);
-			byte_t* TrampolineHook(ptr_t src, ptr_t dst, size_t size);
+			bool Detour(ptr_t src, ptr_t dst, size_t size, hMethod method = hMethod::mJump0);
+			byte_t* TrampolineHook(ptr_t src, ptr_t dst, size_t size, hMethod method = hMethod::mJump0);
 		}
 	}
 #	endif //Internals
