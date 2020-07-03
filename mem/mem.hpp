@@ -1,7 +1,3 @@
-#ifndef linux //Delete this if I forgot to
-#define linux
-#endif
-
 #pragma once
 #ifndef MEMORY
 
