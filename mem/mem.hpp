@@ -1,10 +1,9 @@
-#pragma once
-#ifndef MEMORY
+#ifndef linux //remove
+#define linux
+#endif
 
-//Pre-Includes
-
-#define MEM_INCLUDE_EXTERNALS 1
-#define MEM_INCLUDE_INTERNALS 1
+#ifndef MEM
+#define MEM
 
 //Operating System
 
@@ -29,13 +28,6 @@
 #else
 #define MEM_MBCS
 #endif
-
-//Compatibility
-
-#define MEM_COMPATIBLE (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
-#define MEM_INCLUDE MEM_INCLUDE_EXTERNALS || MEM_INCLUDE_INTERNALS
-
-#if MEM_COMPATIBLE
 
 //Functions
 
@@ -73,12 +65,6 @@
 #define CALC_ARG_LENGTH(...) _CALC_ARG_LENGTH(__VA_ARGS__)
 #define CALC_ASM_LENGTH(...) CALC_ARG_LENGTH(__VA_ARGS__)
 
-#if defined(MEM_UCS)
-#define MEM_STR(str) CONCAT_STR(L, str)
-#elif defined(MEM_MBCS)
-#define MEM_STR(str) str
-#endif
-
 //Assembly
 
 #define _MEM_JMP        0xE9
@@ -98,39 +84,40 @@
 #define _MEM_DWORD      0x0, 0x0, 0x0, 0x0
 #define _MEM_QWORD      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 
-//Memory Protections
-
-#if defined(MEM_WIN)
-#elif defined(MEM_LINUX)
-#define MEM_PROT_X   PROT_EXEC
-#define MEM_PROT_R   PROT_READ
-#define MEM_PROT_W   PROT_WRITE
-#define MEM_PROT_XRW MEM_PROT_X | MEM_PROT_R | MEM_PROT_W
+#if defined(MEM_86)
+#define _MEM_DETOUR_METHOD0    _MEM_MOV_EAX, _MEM_DWORD, _MEM_JMP_EAX
+#define _MEM_DETOUR_METHOD1    _MEM_JMP, _MEM_DWORD
+#define _MEM_DETOUR_METHOD2    _MEM_MOV_EAX, _MEM_DWORD, _MEM_PUSH_EAX, _MEM_RET
+#define _MEM_DETOUR_METHOD3    _MEM_PUSH, _MEM_DWORD, _MEM_RET
+#define _MEM_DETOUR_METHOD4    _MEM_MOV_EAX, _MEM_DWORD, _MEM_CALL_EAX
+#define _MEM_DETOUR_METHOD5    _MEM_CALL, _MEM_DWORD
+#elif defined(MEM_64)
+#define _MEM_DETOUR_METHOD0    _MEM_MOVABS_RAX, _MEM_QWORD, _MEM_JMP_RAX
+#define _MEM_DETOUR_METHOD1    _MEM_JMP, _MEM_DWORD
+#define _MEM_DETOUR_METHOD2    _MEM_MOVABS_RAX, _MEM_QWORD, _MEM_PUSH_RAX, _MEM_RET
+#define _MEM_DETOUR_METHOD3    _MEM_PUSH, _MEM_DWORD, _MEM_RET
+#define _MEM_DETOUR_METHOD4    _MEM_MOVABS_RAX, _MEM_QWORD, _MEM_CALL_RAX
+#define _MEM_DETOUR_METHOD5    _MEM_CALL, _MEM_DWORD
 #endif
-
 //Other
 
-#define DEFAULT_BUFFER_SIZE 64
-#define MAX_BUFFER_SIZE 1024
-#define KNOWN_BYTE       'x'
-#define KNOWN_BYTE_UPPER 'X'
-#define UNKNOWN_BYTE     '?'
-#define BAD_RETURN -1
+#define MEM_BAD_RETURN -1
 
-//## Includes
+//Compatibility
 
-#include <iostream>
-#include <map>
+#define MEM_COMPATIBLE_OS   defined(MEM_WIN) || defined(MEM_LINUX)
+#define MEM_COMPATIBLE_ARCH defined(MEM_86) || defined(MEM_64)
+#define MEM_COMPATIBLE MEM_COMPATIBLE_OS && MEM_COMPATIBLE_ARCH
+
+#if MEM_COMPATIBLE
+
+//Includes
+#include <array>
 #include <vector>
 #include <string.h>
-#include <stdint.h>
-
 #if defined(MEM_WIN)
 #elif defined(MEM_LINUX)
 #include <fstream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
@@ -142,118 +129,76 @@
 #include <sys/uio.h>
 #endif
 
-//## Types
-
-typedef uint8_t  byte_t;
-typedef uint16_t word_t;
-typedef uint32_t dword_t;
-typedef uint64_t qword_t;
-typedef void*    addr_t;
-typedef byte_t*  buffer_t;
-
-#if defined(MEM_WIN)
-typedef TCHAR     char_t;
-#elif defined(MEM_LINUX)
-typedef char     char_t;
-#endif
-
-#if defined(MEM_86)
-typedef dword_t mem_t;
-#elif defined(MEM_64)
-typedef qword_t mem_t;
-#endif
-
-typedef char* cstr_t;
-typedef std::basic_string<char_t> str_t;
-
-//## Memory
-
-#if MEM_INCLUDE
-#if defined(MEM_WIN)
-namespace Memory
+namespace mem
 {
-#   if MEM_INCLUDE_EXTERNALS
-    namespace Ex
+    typedef char               char_t;
+    typedef int                int_t;
+    typedef void               void_t;
+
+    typedef char               int8_t;
+    typedef short              int16_t;
+    typedef int                int32_t;
+    typedef long long          int64_t;
+
+    typedef unsigned char      uint8_t;
+    typedef unsigned short     uint16_t;
+    typedef unsigned int       uint32_t;
+    typedef unsigned long long uint64_t;
+
+#   if defined(MEM_WIN)
+    typedef uint32_t pid_t;
+#   elif defined(MEM_LINUX)
+    typedef int32_t  pid_t;
+#   endif
+
+#   if defined(MEM_86)
+    typedef int32_t  intptr_t;
+    typedef uint32_t uintptr_t;
+#   elif defined(MEM_64)
+    typedef int64_t  intptr_t;
+    typedef uint64_t uintptr_t;
+#   endif
+
+    typedef uint8_t  byte_t;
+    typedef uint16_t word_t;
+    typedef uint32_t dword_t;
+    typedef uint64_t qword_t;
+
+    typedef byte_t*                   byteptr_t;
+    typedef void_t*                   voidptr_t;
+    typedef uint64_t                  size_t;
+    typedef std::basic_string<char_t> string_t;
+
+    enum class detour_int
     {
+        method0,
+        method1,
+        method2,
+        method3,
+        method4,
+        method5
+    };
 
-    }
-#   endif //MEM_INCLUDE_EXTERNALS
-
-#   if MEM_INCLUDE_INTERNALS
-    namespace In
+    namespace ex
     {
-
+        pid_t getpid(string_t process_name);
+        int_t read  (pid_t pid, voidptr_t src, voidptr_t dst,  size_t size);
+        int_t write (pid_t pid, voidptr_t src, byteptr_t data, size_t size);
     }
-#   endif //MEM_INCLUDE_INTERNALS
+
+    namespace in
+    {
+        pid_t getpid();
+        void_t read (voidptr_t src, voidptr_t dst,  size_t size);
+        void_t write(voidptr_t src, byteptr_t data, size_t size);
+        void_t set(voidptr_t src, byte_t byte, size_t size);
+        int_t protect(voidptr_t src, int_t protection, size_t size);
+        voidptr_t allocate(int_t protection, size_t size);
+        int_t detour_length(detour_int method);
+        int_t detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
+        voidptr_t detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
+    }
 }
-#elif defined(MEM_LINUX)
-namespace Memory
-{
-    str_t ParseMask(str_t mask);
-#   if MEM_INCLUDE_EXTERNALS
-    namespace Ex
-    {
-        pid_t GetProcessIdByName(str_t processName);
-		addr_t GetModuleAddress(pid_t pid, str_t moduleName);
-        int Read(pid_t pid, addr_t src, addr_t dst, size_t size);
-		int Write(pid_t pid, addr_t src, addr_t data, size_t size);
-        addr_t PatternScan(pid_t pid, addr_t begin, addr_t end, buffer_t pattern, str_t mask);
-		bool IsProcessRunning(pid_t pid);
-    }
-#   endif //MEM_INCLUDE_EXTERNALS
-
-#   if MEM_INCLUDE_INTERNALS
-    namespace In
-    {
-        pid_t GetProcessId();
-        addr_t Allocate(size_t size, int protection);
-        bool IsBadPointer(addr_t pointer); //Not recommended
-        int Protect(addr_t src, size_t size, int protection);
-        void Zero(addr_t src, size_t size);
-        void Read(addr_t src, addr_t dst, size_t size);
-        void Write(addr_t src, addr_t data, size_t size);
-        addr_t PatternScan(addr_t begin, addr_t end, buffer_t pattern, str_t mask);
-
-        //Detour
-
-        enum class DetourClass
-        {
-            Method0,
-            //mov *ax, ABS_ADDR
-            //jmp *ax
-
-            Method1,
-            //jmp REL_ADDR
-
-            Method2,
-            //mov *ax, ABS_ADDR
-            //push *ax
-            //ret
-
-            Method3,
-            //push ABS_ADDR_DWORD
-            //ret
-
-            Method4,
-            //mov *ax, ABS_ADDR
-            //call *ax
-
-            Method5,
-            //call REL_ADDR
-
-        };
-
-        int DetourRestore(addr_t src);
-        int DetourLength(DetourClass method);
-        int Detour(addr_t src, addr_t dst, int size, DetourClass method = DetourClass::Method0);
-        addr_t DetourTrampoline(addr_t src, addr_t dst, int size, DetourClass method = DetourClass::Method0, addr_t gateway_out = NULL);
-
-    }
-#   endif //MEM_INCLUDE_INTERNALS
-}
-#endif
-#endif //MEM_INCLUDE
 
 #endif //MEM_COMPATIBLE
-#define MEMORY
-#endif //MEMORY
+#endif //MEM
