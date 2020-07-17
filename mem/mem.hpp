@@ -1,6 +1,5 @@
-#ifndef linux //remove
-#define linux
-#endif
+//Made by rdbo
+//https://github.com/rdbo/Memory
 
 #ifndef MEM
 #define MEM
@@ -9,7 +8,7 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__) && !defined(linux)
 #define MEM_WIN
-#elif defined(linux)
+#elif defined(linux) || defined(__linux__)
 #define MEM_LINUX
 #endif
 
@@ -115,6 +114,8 @@
 #include <array>
 #include <vector>
 #include <string.h>
+#include <fstream>
+#include <sstream>
 #if defined(MEM_WIN)
 #elif defined(MEM_LINUX)
 #include <fstream>
@@ -166,8 +167,16 @@ namespace mem
 
     typedef byte_t*                   byteptr_t;
     typedef void_t*                   voidptr_t;
-    typedef uint64_t                  size_t;
+    typedef unsigned long             size_t;
     typedef std::basic_string<char_t> string_t;
+
+    typedef struct
+    {
+        string_t name;
+        uintptr_t base;
+        uintptr_t size;
+        uintptr_t end;
+    }moduleinfo_t;
 
     enum class detour_int
     {
@@ -181,22 +190,24 @@ namespace mem
 
     namespace ex
     {
-        pid_t getpid(string_t process_name);
-        int_t read  (pid_t pid, voidptr_t src, voidptr_t dst,  size_t size);
-        int_t write (pid_t pid, voidptr_t src, byteptr_t data, size_t size);
+        pid_t        getpid (string_t process_name);
+        moduleinfo_t getmoduleinfo (pid_t pid, string_t module_name);
+        int_t        read  (pid_t pid, voidptr_t src, voidptr_t dst,  size_t size);
+        int_t        write (pid_t pid, voidptr_t src, byteptr_t data, size_t size);
     }
 
     namespace in
     {
-        pid_t getpid();
-        void_t read (voidptr_t src, voidptr_t dst,  size_t size);
-        void_t write(voidptr_t src, byteptr_t data, size_t size);
-        void_t set(voidptr_t src, byte_t byte, size_t size);
-        int_t protect(voidptr_t src, int_t protection, size_t size);
-        voidptr_t allocate(int_t protection, size_t size);
-        int_t detour_length(detour_int method);
-        int_t detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
-        voidptr_t detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
+        pid_t        getpid();
+        moduleinfo_t getmoduleinfo(string_t module_name);
+        void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
+        void_t       write(voidptr_t src, byteptr_t data, size_t size);
+        void_t       set(voidptr_t src, byte_t byte, size_t size);
+        int_t        protect(voidptr_t src, int_t protection, size_t size);
+        voidptr_t    allocate(int_t protection, size_t size);
+        int_t        detour_length(detour_int method);
+        int_t        detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
+        voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
     }
 }
 

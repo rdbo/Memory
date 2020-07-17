@@ -1,3 +1,6 @@
+//Made by rdbo
+//https://github.com/rdbo/Memory
+
 #include "mem.hpp"
 #if MEM_COMPATIBLE
 
@@ -59,6 +62,43 @@ mem::pid_t mem::ex::getpid(string_t process_name)
 	return pid;
 }
 
+mem::moduleinfo_t mem::ex::getmoduleinfo(pid_t pid, string_t module_name)
+{
+    moduleinfo_t modinfo{};
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
+    char path_buffer[64];
+    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
+    std::ifstream file(path_buffer, std::ios::binary);
+    if(!file.is_open()) return modinfo;
+    std::stringstream ss;
+    ss << file.rdbuf();
+    std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
+    std:size_t base_address_end = ss.str().find('-', base_address_pos);
+    std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
+
+    std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
+    end_address_pos = ss.str().find('-', end_address_pos) + 1;
+    std::size_t end_address_end = ss.str().find(' ', end_address_pos);
+    std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
+
+#   if defined(MEM_86)
+    mem::uintptr_t base_address = strtoul(base_address_str.c_str(), NULL, 16);
+    mem::uintptr_t end_address = strtoul(end_address_str.c_str(), NULL, 16);
+#   elif defined(MEM_64)
+    mem::uintptr_t base_address = strtoull(base_address_str.c_str(), NULL, 16);
+    mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
+#   endif
+
+    modinfo.name = module_name;
+    modinfo.base = base_address;
+    modinfo.end = end_address;
+    modinfo.size = modinfo.end - modinfo.base;
+#   endif
+
+    return modinfo;
+}
+
 mem::int_t mem::ex::read(pid_t pid, voidptr_t src, voidptr_t dst, size_t size)
 {
 #   if defined(MEM_WIN)
@@ -98,6 +138,14 @@ mem::pid_t mem::in::getpid()
     return (pid_t)::getpid();
 #   endif
     return (pid_t)MEM_BAD_RETURN;
+}
+
+mem::moduleinfo_t mem::in::getmoduleinfo(string_t module_name)
+{
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
+    return mem::ex::getmoduleinfo(mem::in::getpid(), module_name);
+#   endif
 }
 
 mem::void_t mem::in::read (voidptr_t src, voidptr_t dst,  size_t size)
