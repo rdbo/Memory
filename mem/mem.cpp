@@ -134,9 +134,9 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 #   endif
 
     modinfo.name = module_name_str;
-    modinfo.base = base_address;
-    modinfo.end = end_address;
-    modinfo.size = modinfo.end - modinfo.base;
+    modinfo.base = (mem::voidptr_t)base_address;
+    modinfo.end = (mem::voidptr_t)end_address;
+    modinfo.size = end_address - base_address;
 #   endif
 
     return modinfo;

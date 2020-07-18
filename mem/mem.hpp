@@ -179,9 +179,9 @@ namespace mem
     typedef struct
     {
         string_t name;
-        uintptr_t base;
+        voidptr_t base;
         uintptr_t size;
-        uintptr_t end;
+        voidptr_t end;
 #       if defined(MEM_WIN)
 #       elif defined(MEM_LINUX)
 #       endif
