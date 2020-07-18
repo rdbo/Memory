@@ -113,6 +113,7 @@
 #if MEM_COMPATIBLE
 
 //Includes
+#include <iostream>
 #include <array>
 #include <vector>
 #include <map>
@@ -169,7 +170,7 @@ namespace mem
     typedef uint64_t qword_t;
 
     typedef byte_t*                   byteptr_t;
-    typedef std::basic_string<char>   bytearray_t;
+    typedef std::basic_string<int8_t> bytearray_t;
     typedef void_t*                   voidptr_t;
     typedef unsigned long             size_t;
     typedef std::basic_string<char_t> string_t;
@@ -181,6 +182,15 @@ namespace mem
         uintptr_t size;
         uintptr_t end;
     }moduleinfo_t;
+
+    typedef struct
+    {
+        string_t name;
+        pid_t    pid;
+#       if defined(MEM_WIN)
+#       elif defined(MEM_LINUX)
+#       endif
+    }process_t;
 
     enum class detour_int
     {
@@ -197,17 +207,22 @@ namespace mem
     namespace ex
     {
         pid_t        getpid (string_t process_name);
-        moduleinfo_t getmoduleinfo (pid_t pid, string_t module_name);
-        int_t        read  (pid_t pid, voidptr_t src, voidptr_t dst,  size_t size);
-        int_t        write (pid_t pid, voidptr_t src, byteptr_t data, size_t size);
-        int_t        set   (pid_t pid, voidptr_t src, byte_t byte,    size_t size);
-        voidptr_t    patternscan(pid_t pid, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        voidptr_t    patternscan(pid_t pid, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+        process_t    getprocess(string_t process_name);
+        process_t    getprocess(pid_t pid);
+        string_t     getprocessname(pid_t pid);
+        moduleinfo_t getmoduleinfo (process_t process, string_t module_name);
+        int_t        read  (process_t process, voidptr_t src, voidptr_t dst,  size_t size);
+        int_t        write (process_t process, voidptr_t src, byteptr_t data, size_t size);
+        int_t        set   (process_t process, voidptr_t src, byte_t byte,    size_t size);
+        voidptr_t    patternscan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    patternscan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
     }
 
     namespace in
     {
         pid_t        getpid();
+        process_t    getprocess();
+        string_t     getprocessname();
         moduleinfo_t getmoduleinfo(string_t module_name);
         voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
         voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);

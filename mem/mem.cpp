@@ -43,6 +43,8 @@ mem::string_t mem::parsemask(string_t mask)
 mem::pid_t mem::ex::getpid(string_t process_name)
 {
 	pid_t pid = (pid_t)MEM_BAD_RETURN;
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
 	DIR* pdir = opendir("/proc");
 	if (!pdir)
 		return pid;
@@ -50,37 +52,61 @@ mem::pid_t mem::ex::getpid(string_t process_name)
 	struct dirent* pdirent;
 	while (pid < 0 && (pdirent = readdir(pdir)))
 	{
-		int id = atoi(pdirent->d_name);
+		pid_t id = atoi(pdirent->d_name);
 		if (id > 0)
 		{
-			string_t cmdpath = string_t("/proc/") + pdirent->d_name + "/cmdline";
-			std::ifstream cmdfile(cmdpath.c_str());
-			string_t cmdline;
-			getline(cmdfile, cmdline);
-			size_t pos = cmdline.find('\0');
-			if (!cmdline.empty())
-			{
-				if (pos != string_t::npos)
-					cmdline = cmdline.substr(0, pos);
-				pos = cmdline.rfind('/');
-				if (pos != string_t::npos)
-					cmdline = cmdline.substr(pos + 1);
-				if (process_name.c_str() == cmdline.c_str())
-					pid = id;
-			}
+			std::string proc_name = getprocessname(id);
+            if(!strcmp(proc_name.c_str(), process_name.c_str()))
+                pid = id;
 		}
 	}
 	closedir(pdir);
+#   endif
 	return pid;
 }
 
-mem::moduleinfo_t mem::ex::getmoduleinfo(pid_t pid, string_t module_name)
+mem::process_t mem::ex::getprocess(string_t process_name)
+{
+    process_t process{};
+    process.name = process_name;
+    process.pid = getpid(process_name);
+    return process;
+}
+
+mem::process_t mem::ex::getprocess(pid_t pid)
+{
+    process_t process{};
+    process.name = getprocessname(pid);
+    process.pid = pid;
+    return process;
+}
+
+mem::string_t mem::ex::getprocessname(pid_t pid)
+{
+    mem::string_t process_name;
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
+    char path_buffer[64];
+    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
+    std::ifstream file(path_buffer, std::ios::binary);
+    if(!file.is_open()) return process_name;
+    std::stringstream ss;
+    ss << file.rdbuf();
+    std::size_t end = ss.str().find('\n', 0);
+    std::size_t begin = ss.str().rfind('/', end) + 1;
+    if(end == -1 || begin == -1 || begin == 0) return process_name;
+    process_name = ss.str().substr(begin, end - begin);
+#   endif
+    return process_name;
+}
+
+mem::moduleinfo_t mem::ex::getmoduleinfo(process_t process, string_t module_name)
 {
     moduleinfo_t modinfo{};
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
     char path_buffer[64];
-    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
+    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", process.pid);
     std::ifstream file(path_buffer, std::ios::binary);
     if(!file.is_open()) return modinfo;
     std::stringstream ss;
@@ -111,7 +137,7 @@ mem::moduleinfo_t mem::ex::getmoduleinfo(pid_t pid, string_t module_name)
     return modinfo;
 }
 
-mem::int_t mem::ex::read(pid_t pid, voidptr_t src, voidptr_t dst, size_t size)
+mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -121,12 +147,12 @@ mem::int_t mem::ex::read(pid_t pid, voidptr_t src, voidptr_t dst, size_t size)
 	iodst.iov_len = size;
 	iosrc.iov_base = src;
 	iosrc.iov_len = size;
-	return process_vm_readv(pid, &iodst, 1, &iosrc, 1, 0);
+	return process_vm_readv(process.pid, &iodst, 1, &iosrc, 1, 0);
 #   endif
     return MEM_BAD_RETURN;
 }
 
-mem::int_t mem::ex::write(pid_t pid, voidptr_t src, byteptr_t data, size_t size)
+mem::int_t mem::ex::write(process_t process, voidptr_t src, byteptr_t data, size_t size)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -136,19 +162,19 @@ mem::int_t mem::ex::write(pid_t pid, voidptr_t src, byteptr_t data, size_t size)
 	iosrc.iov_len = size;
 	iodst.iov_base = src;
 	iodst.iov_len = size;
-	return process_vm_writev(pid, &iosrc, 1, &iodst, 1, 0);
+	return process_vm_writev(process.pid, &iosrc, 1, &iodst, 1, 0);
 #   endif
     return MEM_BAD_RETURN;
 }
 
-mem::int_t mem::ex::set(pid_t pid, voidptr_t src, byte_t byte, size_t size)
+mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
 {
     byte_t data[size];
     mem::in::set(data, byte, size);
-    return write(pid, src, data, size);
+    return write(process, src, data, size);
 }
 
-mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+mem::voidptr_t mem::ex::patternscan(process_t process, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
     mask = parsemask(mask);
 	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
@@ -160,7 +186,7 @@ mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, 
         byte_t pbyte;
 		for (size_t j = 0; j < mask.length(); j++)
 		{
-            read(pid, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
+            read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
 			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
 		}
 
@@ -170,9 +196,9 @@ mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, 
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::voidptr_t mem::ex::patternscan(process_t process, string_t pattern, string_t mask, voidptr_t base, size_t size)
 {
-    return patternscan(pid, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+    return patternscan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 //mem::in
@@ -186,11 +212,26 @@ mem::pid_t mem::in::getpid()
     return (pid_t)MEM_BAD_RETURN;
 }
 
+mem::process_t mem::in::getprocess()
+{
+    process_t process{};
+
+    process.pid = getpid();
+    process.name = getprocessname();
+
+    return process;
+}
+
+mem::string_t mem::in::getprocessname()
+{
+    return mem::ex::getprocessname(getpid());
+}
+
 mem::moduleinfo_t mem::in::getmoduleinfo(string_t module_name)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
-    return mem::ex::getmoduleinfo(mem::in::getpid(), module_name);
+    return mem::ex::getmoduleinfo(getprocess(), module_name);
 #   endif
 }
 
