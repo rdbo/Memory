@@ -206,30 +206,30 @@ namespace mem
         method5
     };
 
-    string_t parsemask(string_t mask);
+    string_t parse_mask(string_t mask);
 
     namespace ex
     {
-        pid_t        getpid (string_t process_name);
-        process_t    getprocess(string_t process_name);
-        process_t    getprocess(pid_t pid);
-        string_t     getprocessname(pid_t pid);
-        moduleinfo_t getmoduleinfo (process_t process, string_t module_name);
+        pid_t        get_pid (string_t process_name);
+        process_t    get_process(string_t process_name);
+        process_t    get_process(pid_t pid);
+        string_t     get_process_name(pid_t pid);
+        moduleinfo_t get_module_info (process_t process, string_t module_name);
         int_t        read  (process_t process, voidptr_t src, voidptr_t dst,  size_t size);
         int_t        write (process_t process, voidptr_t src, byteptr_t data, size_t size);
         int_t        set   (process_t process, voidptr_t src, byte_t byte,    size_t size);
-        voidptr_t    patternscan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        voidptr_t    patternscan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+        voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
     }
 
     namespace in
     {
-        pid_t        getpid();
-        process_t    getprocess();
-        string_t     getprocessname();
-        moduleinfo_t getmoduleinfo(string_t module_name);
-        voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+        pid_t        get_pid();
+        process_t    get_process();
+        string_t     get_process_name();
+        moduleinfo_t get_module_info(string_t module_name);
+        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
         void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
         void_t       write(voidptr_t src, byteptr_t data, size_t size);
         void_t       set(voidptr_t src, byte_t byte, size_t size);

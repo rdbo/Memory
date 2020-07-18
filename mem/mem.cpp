@@ -30,7 +30,7 @@ std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
 
 //mem
 
-mem::string_t mem::parsemask(string_t mask)
+mem::string_t mem::parse_mask(string_t mask)
 {
     for(size_t i = 0; i < mask.length(); i++)
         mask[i] = mask.at(i) == MEM_KNOWN_BYTE || mask.at(i) == (char)toupper(MEM_KNOWN_BYTE) ? MEM_KNOWN_BYTE : MEM_UNKNOWN_BYTE;
@@ -40,7 +40,7 @@ mem::string_t mem::parsemask(string_t mask)
 
 //mem::ex
 
-mem::pid_t mem::ex::getpid(string_t process_name)
+mem::pid_t mem::ex::get_pid(string_t process_name)
 {
 	pid_t pid = (pid_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
@@ -55,7 +55,7 @@ mem::pid_t mem::ex::getpid(string_t process_name)
 		pid_t id = atoi(pdirent->d_name);
 		if (id > 0)
 		{
-			std::string proc_name = getprocessname(id);
+			std::string proc_name = get_process_name(id);
             if(!strcmp(proc_name.c_str(), process_name.c_str()))
                 pid = id;
 		}
@@ -65,23 +65,23 @@ mem::pid_t mem::ex::getpid(string_t process_name)
 	return pid;
 }
 
-mem::process_t mem::ex::getprocess(string_t process_name)
+mem::process_t mem::ex::get_process(string_t process_name)
 {
     process_t process{};
-    process.pid = getpid(process_name);
-    process.name = getprocessname(process.pid);
+    process.pid = get_pid(process_name);
+    process.name = get_process_name(process.pid);
     return process;
 }
 
-mem::process_t mem::ex::getprocess(pid_t pid)
+mem::process_t mem::ex::get_process(pid_t pid)
 {
     process_t process{};
-    process.name = getprocessname(pid);
+    process.name = get_process_name(pid);
     process.pid = pid;
     return process;
 }
 
-mem::string_t mem::ex::getprocessname(pid_t pid)
+mem::string_t mem::ex::get_process_name(pid_t pid)
 {
     mem::string_t process_name;
 #   if defined(MEM_WIN)
@@ -100,7 +100,7 @@ mem::string_t mem::ex::getprocessname(pid_t pid)
     return process_name;
 }
 
-mem::moduleinfo_t mem::ex::getmoduleinfo(process_t process, string_t module_name)
+mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_name)
 {
     moduleinfo_t modinfo{};
 #   if defined(MEM_WIN)
@@ -179,9 +179,9 @@ mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t si
     return write(process, src, data, size);
 }
 
-mem::voidptr_t mem::ex::patternscan(process_t process, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
-    mask = parsemask(mask);
+    mask = parse_mask(mask);
 	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
     if(mask.length() != pattern.length())
     
@@ -201,14 +201,14 @@ mem::voidptr_t mem::ex::patternscan(process_t process, string_t pattern, string_
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::ex::patternscan(process_t process, string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, size_t size)
 {
-    return patternscan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+    return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 //mem::in
 
-mem::pid_t mem::in::getpid()
+mem::pid_t mem::in::get_pid()
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -217,26 +217,26 @@ mem::pid_t mem::in::getpid()
     return (pid_t)MEM_BAD_RETURN;
 }
 
-mem::process_t mem::in::getprocess()
+mem::process_t mem::in::get_process()
 {
     process_t process{};
 
     process.pid = getpid();
-    process.name = getprocessname();
+    process.name = get_process_name();
 
     return process;
 }
 
-mem::string_t mem::in::getprocessname()
+mem::string_t mem::in::get_process_name()
 {
-    return mem::ex::getprocessname(getpid());
+    return mem::ex::get_process_name(getpid());
 }
 
-mem::moduleinfo_t mem::in::getmoduleinfo(string_t module_name)
+mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
-    return mem::ex::getmoduleinfo(getprocess(), module_name);
+    return mem::ex::get_module_info(get_process(), module_name);
 #   endif
 }
 
@@ -403,9 +403,9 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
     write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
 }
 
-mem::voidptr_t mem::in::patternscan(string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
-    mask = parsemask(mask);
+    mask = parse_mask(mask);
 	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
     if(mask.length() != pattern.length())
     
@@ -423,9 +423,9 @@ mem::voidptr_t mem::in::patternscan(string_t pattern, string_t mask, voidptr_t b
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::in::patternscan(string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, size_t size)
 {
-    return patternscan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+    return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 #endif //MEM_COMPATIBLE
