@@ -14,15 +14,15 @@
 
 //Architecture
 
-#if defined(_M_IX86) || defined(__i386__)
+#if defined(_M_IX86) || defined(__i386__) || __WORDSIZE == 32
 #define MEM_86
-#elif defined(_M_X64) || defined(__LP64__) || defined(_LP64)
+#elif defined(_M_X64) || defined(__LP64__) || defined(_LP64) || __WORDSIZE == 64
 #define MEM_64
 #endif
 
 //Charset
 
-#if defined(_UNICODE)
+#if defined(_UNICODE) && defined(MEM_WIN)
 #define MEM_UCS
 #else
 #define MEM_MBCS
@@ -136,6 +136,7 @@
 
 namespace mem
 {
+    typedef bool               bool_t;
     typedef char               char_t;
     typedef int                int_t;
     typedef void               void_t;
@@ -181,6 +182,9 @@ namespace mem
         uintptr_t base;
         uintptr_t size;
         uintptr_t end;
+#       if defined(MEM_WIN)
+#       elif defined(MEM_LINUX)
+#       endif
     }moduleinfo_t;
 
     typedef struct

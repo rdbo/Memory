@@ -68,8 +68,8 @@ mem::pid_t mem::ex::getpid(string_t process_name)
 mem::process_t mem::ex::getprocess(string_t process_name)
 {
     process_t process{};
-    process.name = process_name;
     process.pid = getpid(process_name);
+    process.name = getprocessname(process.pid);
     return process;
 }
 
@@ -111,6 +111,11 @@ mem::moduleinfo_t mem::ex::getmoduleinfo(process_t process, string_t module_name
     if(!file.is_open()) return modinfo;
     std::stringstream ss;
     ss << file.rdbuf();
+
+    std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
+    std::size_t module_name_end = ss.str().find('\n', module_name_pos);
+    std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
+
     std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
     std:size_t base_address_end = ss.str().find('-', base_address_pos);
     std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
@@ -128,7 +133,7 @@ mem::moduleinfo_t mem::ex::getmoduleinfo(process_t process, string_t module_name
     mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-    modinfo.name = module_name;
+    modinfo.name = module_name_str;
     modinfo.base = base_address;
     modinfo.end = end_address;
     modinfo.size = modinfo.end - modinfo.base;
