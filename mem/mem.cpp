@@ -26,6 +26,18 @@ const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOV_EAX);
 const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
 #endif
 
+std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
+
+//mem
+
+mem::string_t mem::parsemask(string_t mask)
+{
+    for(size_t i = 0; i < mask.length(); i++)
+        mask[i] = mask.at(i) == MEM_KNOWN_BYTE || mask.at(i) == (char)toupper(MEM_KNOWN_BYTE) ? MEM_KNOWN_BYTE : MEM_UNKNOWN_BYTE;
+
+    return mask;
+}
+
 //mem::ex
 
 mem::pid_t mem::ex::getpid(string_t process_name)
@@ -129,6 +141,40 @@ mem::int_t mem::ex::write(pid_t pid, voidptr_t src, byteptr_t data, size_t size)
     return MEM_BAD_RETURN;
 }
 
+mem::int_t mem::ex::set(pid_t pid, voidptr_t src, byte_t byte, size_t size)
+{
+    byte_t data[size];
+    mem::in::set(data, byte, size);
+    return write(pid, src, data, size);
+}
+
+mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+{
+    mask = parsemask(mask);
+	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
+    if(mask.length() != pattern.length())
+    
+	for (size_t i = 0; i < scan_size; i++)
+	{
+		bool found = true;
+        byte_t pbyte;
+		for (size_t j = 0; j < mask.length(); j++)
+		{
+            read(pid, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
+			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
+		}
+
+		if (found) return (voidptr_t)((uintptr_t)base + i);
+	}
+
+	return (mem::voidptr_t)MEM_BAD_RETURN;
+}
+
+mem::voidptr_t mem::ex::patternscan(pid_t pid, string_t pattern, string_t mask, voidptr_t base, size_t size)
+{
+    return patternscan(pid, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+}
+
 //mem::in
 
 mem::pid_t mem::in::getpid()
@@ -206,6 +252,11 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
     #endif
     if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, protection, size) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
+
+    byte_t* stolen_bytes = new byte_t[size];
+    write(stolen_bytes, (byteptr_t)src, size);
+    g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
+
     switch(method)
     {
         case detour_int::method0:
@@ -292,6 +343,43 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
     protect(gateway, gateway_size, protection);
     detour(src, dst, method, size);
     return gateway;
+}
+
+mem::void_t mem::in::detour_restore(voidptr_t src)
+{
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
+    int protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+#   endif
+
+    size_t size = g_detour_restore_array[src].length();
+    protect(src, protection, size);
+    write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
+}
+
+mem::voidptr_t mem::in::patternscan(string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+{
+    mask = parsemask(mask);
+	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
+    if(mask.length() != pattern.length())
+    
+	for (size_t i = 0; i < scan_size; i++)
+	{
+		bool found = true;
+		for (size_t j = 0; j < mask.length(); j++)
+		{
+			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(byte_t*)((uintptr_t)base + i + j);
+		}
+
+		if (found) return (voidptr_t)((uintptr_t)base + i);
+	}
+
+	return (mem::voidptr_t)MEM_BAD_RETURN;
+}
+
+mem::voidptr_t mem::in::patternscan(string_t pattern, string_t mask, voidptr_t base, size_t size)
+{
+    return patternscan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 #endif //MEM_COMPATIBLE

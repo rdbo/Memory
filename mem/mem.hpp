@@ -98,9 +98,11 @@
 #define _MEM_DETOUR_METHOD4    _MEM_MOVABS_RAX, _MEM_QWORD, _MEM_CALL_RAX
 #define _MEM_DETOUR_METHOD5    _MEM_CALL, _MEM_DWORD
 #endif
-//Other
 
+//Other
 #define MEM_BAD_RETURN -1
+#define MEM_KNOWN_BYTE       'x'
+#define MEM_UNKNOWN_BYTE     '?'
 
 //Compatibility
 
@@ -113,6 +115,7 @@
 //Includes
 #include <array>
 #include <vector>
+#include <map>
 #include <string.h>
 #include <fstream>
 #include <sstream>
@@ -166,6 +169,7 @@ namespace mem
     typedef uint64_t qword_t;
 
     typedef byte_t*                   byteptr_t;
+    typedef std::basic_string<char>   bytearray_t;
     typedef void_t*                   voidptr_t;
     typedef unsigned long             size_t;
     typedef std::basic_string<char_t> string_t;
@@ -188,18 +192,25 @@ namespace mem
         method5
     };
 
+    string_t parsemask(string_t mask);
+
     namespace ex
     {
         pid_t        getpid (string_t process_name);
         moduleinfo_t getmoduleinfo (pid_t pid, string_t module_name);
         int_t        read  (pid_t pid, voidptr_t src, voidptr_t dst,  size_t size);
         int_t        write (pid_t pid, voidptr_t src, byteptr_t data, size_t size);
+        int_t        set   (pid_t pid, voidptr_t src, byte_t byte,    size_t size);
+        voidptr_t    patternscan(pid_t pid, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    patternscan(pid_t pid, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
     }
 
     namespace in
     {
         pid_t        getpid();
         moduleinfo_t getmoduleinfo(string_t module_name);
+        voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    patternscan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
         void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
         void_t       write(voidptr_t src, byteptr_t data, size_t size);
         void_t       set(voidptr_t src, byte_t byte, size_t size);
@@ -208,6 +219,7 @@ namespace mem
         int_t        detour_length(detour_int method);
         int_t        detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
         voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
+        void_t       detour_restore(voidptr_t src);
     }
 }
 
