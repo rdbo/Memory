@@ -217,17 +217,10 @@ namespace mem
         moduleinfo_t get_module_info (process_t process, string_t module_name);
         bool_t       is_process_running(process_t process);
         int_t        read  (process_t process, voidptr_t src, voidptr_t dst,  size_t size);
-        int_t        read  (process_t process, uintptr_t src, uintptr_t dst,  size_t size);
-        int_t        read  (process_t process, intptr_t src, intptr_t dst,  size_t size);
         int_t        write (process_t process, voidptr_t src, voidptr_t data, size_t size);
-        int_t        write (process_t process, uintptr_t src, voidptr_t data, size_t size);
-        int_t        write (process_t process, intptr_t src,  voidptr_t data, size_t size);
         int_t        set   (process_t process, voidptr_t src, byte_t byte,    size_t size);
-        int_t        set   (process_t process, uintptr_t src, byte_t byte,    size_t size);
-        int_t        set   (process_t process, intptr_t src, byte_t byte,    size_t size);
         voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        uintptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, uintptr_t base, uintptr_t end);
-        intptr_t     pattern_scan(process_t process, bytearray_t pattern, string_t mask, intptr_t base, intptr_t end);
+        voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
     }
 
     namespace in
@@ -236,32 +229,17 @@ namespace mem
         process_t    get_process();
         string_t     get_process_name();
         moduleinfo_t get_module_info(string_t module_name);
+        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
         void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
-        void_t       read (uintptr_t src, uintptr_t dst,  size_t size);
-        void_t       read (intptr_t src,  intptr_t dst,   size_t size);
         void_t       write(voidptr_t src, voidptr_t data, size_t size);
-        void_t       write(uintptr_t src, voidptr_t data, size_t size);
-        void_t       write(intptr_t src,  voidptr_t data, size_t size);
         void_t       set(voidptr_t src, byte_t byte, size_t size);
-        void_t       set(uintptr_t src, byte_t byte, size_t size);
-        void_t       set(intptr_t src,  byte_t byte, size_t size);
         int_t        protect(voidptr_t src, int_t protection, size_t size);
-        int_t        protect(uintptr_t src, int_t protection, size_t size);
-        int_t        protect(intptr_t src,  int_t protection, size_t size);
         voidptr_t    allocate(int_t protection, size_t size);
         int_t        detour_length(detour_int method);
         int_t        detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
-        int_t        detour(uintptr_t src, uintptr_t dst, detour_int method, int_t size);
-        int_t        detour(intptr_t src,  intptr_t dst,  detour_int method, int_t size);
         voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
-        voidptr_t    detour_trampoline(uintptr_t src, uintptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
-        voidptr_t    detour_trampoline(intptr_t src,  intptr_t dst,  detour_int method, int_t size, voidptr_t gateway_out = NULL);
         void_t       detour_restore(voidptr_t src);
-        void_t       detour_restore(uintptr_t src);
-        void_t       detour_restore(intptr_t src);
-        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        uintptr_t    pattern_scan(bytearray_t pattern, string_t mask, uintptr_t base, uintptr_t end);
-        intptr_t     pattern_scan(bytearray_t pattern, string_t mask, intptr_t base,  intptr_t end);
     }
 }
 
