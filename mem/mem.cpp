@@ -142,6 +142,20 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
     return modinfo;
 }
 
+mem::bool_t mem::ex::is_process_running(process_t process)
+{
+#   if defined(MEM_WIN)
+#   elif defined(MEM_LINUX)
+    struct stat sb;
+    char path_buffer[64];
+    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i", process.pid);
+    stat(path_buffer, &sb);
+    return (bool_t)S_ISDIR(sb.st_mode);
+#   endif
+
+    return (bool_t)MEM_BAD_RETURN;
+}
+
 mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
 {
 #   if defined(MEM_WIN)
@@ -157,7 +171,17 @@ mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t
     return MEM_BAD_RETURN;
 }
 
-mem::int_t mem::ex::write(process_t process, voidptr_t src, byteptr_t data, size_t size)
+mem::int_t mem::ex::read(process_t process, uintptr_t src, uintptr_t dst, size_t size)
+{
+    return read(process, (voidptr_t)src, (voidptr_t)dst, size);
+}
+
+mem::int_t mem::ex::read(process_t process, intptr_t src,  intptr_t dst,  size_t size)
+{
+    return read(process, (voidptr_t)src, (voidptr_t)dst, size);
+}
+
+mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size_t size)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -172,11 +196,31 @@ mem::int_t mem::ex::write(process_t process, voidptr_t src, byteptr_t data, size
     return MEM_BAD_RETURN;
 }
 
+mem::int_t mem::ex::write(process_t process, uintptr_t src, voidptr_t data, size_t size)
+{
+    return write(process, (voidptr_t)src, (voidptr_t)data, size);
+}
+
+mem::int_t mem::ex::write(process_t process, intptr_t src,  voidptr_t data, size_t size)
+{
+    return write(process, (voidptr_t)src, (voidptr_t)data, size);
+}
+
 mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
 {
     byte_t data[size];
     mem::in::set(data, byte, size);
     return write(process, src, data, size);
+}
+
+mem::int_t mem::ex::set(process_t process, uintptr_t src, byte_t byte, size_t size)
+{
+    return set(process, (voidptr_t)src, (byte_t)byte, size);
+}
+
+mem::int_t mem::ex::set(process_t process, intptr_t src,  byte_t byte, size_t size)
+{
+    return set(process, (voidptr_t)src, (byte_t)byte, size);
 }
 
 mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
@@ -201,9 +245,14 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::uintptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, uintptr_t base, uintptr_t end)
 {
-    return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+    (mem::uintptr_t)pattern_scan(process, pattern, mask, (voidptr_t)base, (voidptr_t)end);
+}
+
+mem::intptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, intptr_t base,  intptr_t end)
+{
+    return (mem::intptr_t)pattern_scan(process, pattern, mask, (voidptr_t)base, (voidptr_t)end);
 }
 
 //mem::in
@@ -245,14 +294,44 @@ mem::void_t mem::in::read (voidptr_t src, voidptr_t dst,  size_t size)
     memcpy(dst, src, size);
 }
 
-mem::void_t mem::in::write(voidptr_t src, byteptr_t data, size_t size)
+mem::void_t mem::in::read(uintptr_t src, uintptr_t dst,  size_t size)
+{
+    return read((voidptr_t)src, (voidptr_t)dst, size);
+}
+
+mem::void_t mem::in::read(intptr_t src,  intptr_t dst,   size_t size)
+{
+    return read((voidptr_t)src, (voidptr_t)dst, size);
+}
+
+mem::void_t mem::in::write(voidptr_t src, voidptr_t data, size_t size)
 {
     memcpy(src, data, size);
+}
+
+mem::void_t mem::in::write(uintptr_t src, voidptr_t data, size_t size)
+{
+    return write((voidptr_t)src, (voidptr_t)data, size);
+}
+
+mem::void_t mem::in::write(intptr_t src,  voidptr_t data, size_t size)
+{
+    return write((voidptr_t)src, (voidptr_t)data, size);
 }
 
 mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
 {
     memset(src, byte, size);
+}
+
+mem::void_t mem::in::set(uintptr_t src, byte_t byte, size_t size)
+{
+    return set((voidptr_t)src, byte, size);
+}
+
+mem::void_t mem::in::set(intptr_t src,  byte_t byte, size_t size)
+{
+    return set((voidptr_t)src, byte, size);
 }
 
 mem::int_t mem::in::protect(voidptr_t src, int_t protection, size_t size)
@@ -264,6 +343,16 @@ mem::int_t mem::in::protect(voidptr_t src, int_t protection, size_t size)
 	return mprotect((voidptr_t)src_page, size, protection);
 #   endif
     return (int_t)MEM_BAD_RETURN;
+}
+
+mem::int_t mem::in::protect(uintptr_t src, int_t protection, size_t size)
+{
+    return protect((voidptr_t)src, protection, size);
+}
+
+mem::int_t mem::in::protect(intptr_t src,  int_t protection, size_t size)
+{
+    return protect((voidptr_t)src, protection, size);
 }
 
 mem::voidptr_t mem::in::allocate(int_t protection, size_t size)
@@ -363,6 +452,16 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_
     return !(MEM_BAD_RETURN);
 }
 
+mem::int_t mem::in::detour(uintptr_t src, uintptr_t dst, detour_int method, int_t size)
+{
+    return detour((voidptr_t)src, (voidptr_t)dst, method, size);
+}
+
+mem::int_t mem::in::detour(intptr_t src,  intptr_t dst,  detour_int method, int_t size)
+{
+    return detour((voidptr_t)src, (voidptr_t)dst, method, size);
+}
+
 mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out)
 {
     int_t detour_size = detour_length(method);
@@ -391,6 +490,16 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
     return gateway;
 }
 
+mem::voidptr_t mem::in::detour_trampoline(uintptr_t src, uintptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL)
+{
+    return detour_trampoline((voidptr_t)src, (voidptr_t)dst, method, size, gateway_out);
+}
+
+mem::voidptr_t mem::in::detour_trampoline(intptr_t src,  intptr_t dst,  detour_int method, int_t size, voidptr_t gateway_out = NULL)
+{
+    return detour_trampoline((voidptr_t)src, (voidptr_t)dst, method, size, gateway_out);
+}
+
 mem::void_t mem::in::detour_restore(voidptr_t src)
 {
 #   if defined(MEM_WIN)
@@ -401,6 +510,16 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
     size_t size = g_detour_restore_array[src].length();
     protect(src, protection, size);
     write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
+}
+
+mem::void_t mem::in::detour_restore(uintptr_t src)
+{
+    return detour_restore((voidptr_t)src);
+}
+
+mem::void_t mem::in::detour_restore(intptr_t src)
+{
+    return detour_restore((voidptr_t)src);
 }
 
 mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
@@ -423,9 +542,14 @@ mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t 
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::uintptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, uintptr_t base, uintptr_t end)
 {
-    return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+    return (mem::uintptr_t)pattern_scan(pattern, mask, (voidptr_t)base, (voidptr_t)end);
+}
+
+mem::intptr_t  mem::in::pattern_scan(bytearray_t pattern, string_t mask, intptr_t base,  intptr_t end)
+{
+    return (mem::intptr_t)pattern_scan(pattern, mask, (voidptr_t)base, (voidptr_t)end);
 }
 
 #endif //MEM_COMPATIBLE
