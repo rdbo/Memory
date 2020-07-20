@@ -217,7 +217,17 @@ namespace mem
         moduleinfo_t get_module_info (process_t process, string_t module_name);
         bool_t       is_process_running(process_t process);
         int_t        read  (process_t process, voidptr_t src, voidptr_t dst,  size_t size);
+        template <typename type_t> type_t read(process_t process, voidptr_t src)
+        {
+            type_t holder;
+            read(process, src, &holder, sizeof(holder));
+            return holder;
+        }
         int_t        write (process_t process, voidptr_t src, voidptr_t data, size_t size);
+        template <typename type_t> void_t write(process_t process, voidptr_t src, type_t value)
+        {
+            write(process, src, new type_t(value), sizeof(type_t));
+        }
         int_t        set   (process_t process, voidptr_t src, byte_t byte,    size_t size);
         voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
         voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
@@ -228,14 +238,26 @@ namespace mem
         pid_t        get_pid();
         process_t    get_process();
         string_t     get_process_name();
+        moduleinfo_t get_module_info(process_t process, string_t module_name);
         moduleinfo_t get_module_info(string_t module_name);
         voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
         voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
         void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
+        template <typename type_t> type_t read(voidptr_t src)
+        {
+            type_t holder;
+            read(src, &holder, sizeof(holder));
+            return holder;
+        }
         void_t       write(voidptr_t src, voidptr_t data, size_t size);
+        template <typename type_t> void_t write(voidptr_t src, type_t value)
+        {
+            write(src, new type_t(value), sizeof(type_t));
+        }
         void_t       set(voidptr_t src, byte_t byte, size_t size);
-        int_t        protect(voidptr_t src, int_t protection, size_t size);
-        voidptr_t    allocate(int_t protection, size_t size);
+        int_t        protect(voidptr_t src, size_t size, int_t protection);
+        int_t        protect(voidptr_t begin, voidptr_t end, int_t protection);
+        voidptr_t    allocate(size_t size, int_t protection);
         int_t        detour_length(detour_int method);
         int_t        detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
         voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);

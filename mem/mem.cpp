@@ -195,7 +195,7 @@ mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t si
     return write(process, src, data, size);
 }
 
-mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
     mask = parse_mask(mask);
 	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
@@ -204,7 +204,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string
 	for (size_t i = 0; i < scan_size; i++)
 	{
 		bool found = true;
-        byte_t pbyte;
+        int8_t pbyte;
 		for (size_t j = 0; j < mask.length(); j++)
 		{
             read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
@@ -217,7 +217,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::ex::pattern_scan(process_t process, string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
     return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
@@ -248,11 +248,16 @@ mem::string_t mem::in::get_process_name()
     return mem::ex::get_process_name(getpid());
 }
 
+mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_name)
+{
+    return mem::ex::get_module_info(process, module_name);
+}
+
 mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
-    return mem::ex::get_module_info(get_process(), module_name);
+    return get_module_info(get_process(), module_name);
 #   endif
 }
 
@@ -271,7 +276,7 @@ mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
     memset(src, byte, size);
 }
 
-mem::int_t mem::in::protect(voidptr_t src, int_t protection, size_t size)
+mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -282,7 +287,12 @@ mem::int_t mem::in::protect(voidptr_t src, int_t protection, size_t size)
     return (int_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::in::allocate(int_t protection, size_t size)
+mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, int_t protection)
+{
+    protect(begin, (mem::uintptr_t)end - (mem::uintptr_t)begin, protection);
+}
+
+mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
 {
 #   if defined(MEM_WIN)
 #   elif defined(MEM_LINUX)
@@ -419,7 +429,7 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
     write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
 }
 
-mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
     mask = parse_mask(mask);
 	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
@@ -430,7 +440,7 @@ mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t 
 		bool found = true;
 		for (size_t j = 0; j < mask.length(); j++)
 		{
-			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(byte_t*)((uintptr_t)base + i + j);
+			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
 		}
 
 		if (found) return (voidptr_t)((uintptr_t)base + i);
@@ -439,7 +449,7 @@ mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t 
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
-mem::voidptr_t mem::in::pattern_scan(string_t pattern, string_t mask, voidptr_t base, size_t size)
+mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
     return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
