@@ -314,7 +314,7 @@ mem::string_t mem::in::get_process_name()
 {
 	mem::string_t process_name;
 #	if defined(MEM_WIN)
-	char buffer[MAX_PATH];
+	char_t buffer[MAX_PATH * sizeof(char_t)];
 	GetModuleFileName(NULL, buffer, sizeof(buffer));
 	process_name = buffer;
 	process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());

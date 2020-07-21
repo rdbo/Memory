@@ -132,9 +132,9 @@
 #endif
 
 //Other
-#define MEM_BAD_RETURN -1
-#define MEM_KNOWN_BYTE       'x'
-#define MEM_UNKNOWN_BYTE     '?'
+#define MEM_BAD_RETURN         -1
+#define MEM_KNOWN_BYTE         MEM_STR('x')
+#define MEM_UNKNOWN_BYTE       MEM_STR('?')
 
 //Compatibility
 
@@ -173,7 +173,11 @@
 namespace mem
 {
     typedef bool               bool_t;
+#	if defined(MEM_UCS)
+	typedef wchar_t            char_t;
+#	elif defined(MEM_MBCS)
     typedef char               char_t;
+#	endif
     typedef int                int_t;
     typedef void               void_t;
 
@@ -214,7 +218,7 @@ namespace mem
 
     typedef struct
     {
-        string_t  name = "";
+        string_t  name = MEM_STR("");
         voidptr_t base = (voidptr_t)MEM_BAD_RETURN;
         uintptr_t size = (uintptr_t)MEM_BAD_RETURN;
         voidptr_t end  = (voidptr_t)MEM_BAD_RETURN;
@@ -226,7 +230,7 @@ namespace mem
 
     typedef struct
     {
-        string_t name = "";
+        string_t name = MEM_STR("");
         pid_t    pid = (pid_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
 		HANDLE handle = NULL;
