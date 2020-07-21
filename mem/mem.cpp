@@ -2,7 +2,7 @@
 //https://github.com/rdbo/Memory
 
 #include "mem.hpp"
-#if MEM_COMPATIBLE
+#if defined(MEM_COMPATIBLE)
 
 const mem::byte_t MEM_JMP[]        = ASM_GENERATE(_MEM_JMP);
 const mem::byte_t MEM_JMP_RAX[]    = ASM_GENERATE(_MEM_JMP_RAX);
@@ -44,6 +44,26 @@ mem::pid_t mem::ex::get_pid(string_t process_name)
 {
 	pid_t pid = (pid_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnap != INVALID_HANDLE_VALUE)
+	{
+		PROCESSENTRY32 procEntry;
+		procEntry.dwSize = sizeof(procEntry);
+
+		if (Process32First(hSnap, &procEntry))
+		{
+			do
+			{
+				if (!lstrcmp(procEntry.szExeFile, process_name.c_str()))
+				{
+					pid = procEntry.th32ProcessID;
+					break;
+				}
+			} while (Process32Next(hSnap, &procEntry));
+
+		}
+	}
+	CloseHandle(hSnap);
 #   elif defined(MEM_LINUX)
 	DIR* pdir = opendir("/proc");
 	if (!pdir)
@@ -67,17 +87,25 @@ mem::pid_t mem::ex::get_pid(string_t process_name)
 
 mem::process_t mem::ex::get_process(string_t process_name)
 {
-    process_t process{};
-    process.pid = get_pid(process_name);
-    process.name = get_process_name(process.pid);
+	process_t process{};
+	process.pid = get_pid(process_name);
+	process.name = get_process_name(process.pid);
+#	if defined(MEM_WIN)
+	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
+#	elif defined(MEM_LINUX)
+#	endif
     return process;
 }
 
 mem::process_t mem::ex::get_process(pid_t pid)
 {
     process_t process{};
-    process.name = get_process_name(pid);
-    process.pid = pid;
+	process.name = get_process_name(pid);
+	process.pid = pid;
+#	if defined(MEM_WIN)
+	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
+#	elif defined(MEM_LINUX)
+#	endif
     return process;
 }
 
@@ -85,6 +113,25 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 {
     mem::string_t process_name;
 #   if defined(MEM_WIN)
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnap != INVALID_HANDLE_VALUE)
+	{
+		PROCESSENTRY32 procEntry;
+		procEntry.dwSize = sizeof(procEntry);
+
+		if (Process32First(hSnap, &procEntry))
+		{
+			do
+			{
+				if (pid == procEntry.th32ProcessID)
+				{
+					process_name = string_t(procEntry.szExeFile);
+					break;
+				}
+			} while (Process32Next(hSnap, &procEntry));
+		}
+	}
+	CloseHandle(hSnap);
 #   elif defined(MEM_LINUX)
     char path_buffer[64];
     snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
@@ -105,6 +152,14 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 {
     moduleinfo_t modinfo{};
 #   if defined(MEM_WIN)
+	HMODULE hMod;
+	GetModuleHandleEx(NULL, module_name.c_str(), &hMod);
+	MODULEINFO module_info = { 0 };
+	GetModuleInformation(process.handle, hMod, &module_info, sizeof(module_info));
+	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
+	modinfo.size = (size_t)module_info.SizeOfImage;
+	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
+
 #   elif defined(MEM_LINUX)
     char path_buffer[64];
     snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", process.pid);
@@ -148,6 +203,9 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 mem::bool_t mem::ex::is_process_running(process_t process)
 {
 #   if defined(MEM_WIN)
+	DWORD exit_code;
+	GetExitCodeProcess(process.handle, &exit_code);
+	return (bool_t)(exit_code == STILL_ACTIVE);
 #   elif defined(MEM_LINUX)
     struct stat sb;
     char path_buffer[64];
@@ -161,6 +219,7 @@ mem::bool_t mem::ex::is_process_running(process_t process)
 mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
 {
 #   if defined(MEM_WIN)
+	return (int_t)ReadProcessMemory(process.handle, (LPCVOID)src, (LPVOID)dst, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
     struct iovec iosrc;
 	struct iovec iodst;
@@ -176,6 +235,7 @@ mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t
 mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size_t size)
 {
 #   if defined(MEM_WIN)
+	return (int_t)WriteProcessMemory(process.handle, (LPVOID)src, (LPCVOID)data, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
     struct iovec iosrc;
 	struct iovec iodst;
@@ -190,7 +250,7 @@ mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size
 
 mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
 {
-    byte_t data[size];
+    byte_t* data = new byte_t[size];
     mem::in::set(data, byte, size);
     return write(process, src, data, size);
 }
@@ -227,6 +287,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 mem::pid_t mem::in::get_pid()
 {
 #   if defined(MEM_WIN)
+	return (pid_t)::GetCurrentProcessId();
 #   elif defined(MEM_LINUX)
     return (pid_t)::getpid();
 #   endif
@@ -237,15 +298,28 @@ mem::process_t mem::in::get_process()
 {
     process_t process{};
 
-    process.pid = getpid();
+    process.pid = get_pid();
     process.name = get_process_name();
+#	if defined(MEM_WIN)
+	process.handle = GetCurrentProcess();
+#	elif defined(MEM_LINUX)
+#	endif
 
     return process;
 }
 
 mem::string_t mem::in::get_process_name()
 {
-    return mem::ex::get_process_name(getpid());
+	mem::string_t process_name;
+#	if defined(MEM_WIN)
+	char buffer[MAX_PATH];
+	GetModuleFileName(NULL, buffer, sizeof(buffer));
+	process_name = buffer;
+	process_name = process_name.substr(process_name.find('\\'), process_name.length());
+#	elif defined(MEM_LINUX)
+    process_name = mem::ex::get_process_name(get_pid());
+#	endif
+	return process_name;
 }
 
 mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_name)
@@ -255,10 +329,18 @@ mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_na
 
 mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 {
+	moduleinfo_t modinfo = {};
 #   if defined(MEM_WIN)
+	MODULEINFO module_info;
+	HMODULE hmod = GetModuleHandle(module_name.c_str());
+	GetModuleInformation(NULL, hmod, &module_info, sizeof(module_info));
+	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
+	modinfo.size = (size_t)module_info.SizeOfImage;
+	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
 #   elif defined(MEM_LINUX)
-    return get_module_info(get_process(), module_name);
+    modinfo = get_module_info(get_process(), module_name);
 #   endif
+	return modinfo;
 }
 
 mem::void_t mem::in::read (voidptr_t src, voidptr_t dst,  size_t size)
@@ -279,6 +361,7 @@ mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
 mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 {
 #   if defined(MEM_WIN)
+	VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, NULL);
 #   elif defined(MEM_LINUX)
     long pagesize = sysconf(_SC_PAGE_SIZE);
 	uintptr_t src_page = (uintptr_t)src - ((uintptr_t)src % pagesize);
@@ -289,16 +372,18 @@ mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 
 mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, int_t protection)
 {
-    protect(begin, (mem::uintptr_t)end - (mem::uintptr_t)begin, protection);
+    protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
 mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
 {
+	voidptr_t addr = (voidptr_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
+	addr = VirtualAlloc(NULL, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, (DWORD)protection);
 #   elif defined(MEM_LINUX)
-    return mmap(NULL, size, protection, MAP_ANON | MAP_PRIVATE, -1, 0);
+    addr = mmap(NULL, size, protection, MAP_ANON | MAP_PRIVATE, -1, 0);
 #   endif
-    return (voidptr_t)MEM_BAD_RETURN;
+	return addr;
 }
 
 mem::int_t mem::in::detour_length(detour_int method)
@@ -320,6 +405,7 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_
 {
     int_t detour_size = detour_length(method);
     #if defined(MEM_WIN)
+	int_t protection = PAGE_EXECUTE_READWRITE;
     #elif defined(MEM_LINUX)
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
     #endif
@@ -393,6 +479,7 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
 {
     int_t detour_size = detour_length(method);
     #if defined(MEM_WIN)
+	int_t protection = PAGE_EXECUTE_READWRITE;
     #elif defined(MEM_LINUX)
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
     #endif
@@ -420,8 +507,9 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
 mem::void_t mem::in::detour_restore(voidptr_t src)
 {
 #   if defined(MEM_WIN)
+	int_t protection = PAGE_EXECUTE_READWRITE;
 #   elif defined(MEM_LINUX)
-    int protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+    int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #   endif
 
     size_t size = g_detour_restore_array[src].length();

@@ -1,6 +1,7 @@
 //Made by rdbo
 //https://github.com/rdbo/Memory
 
+#pragma once
 #ifndef MEM
 #define MEM
 
@@ -63,6 +64,11 @@
 #define _CALC_ARG_LENGTH(...) PP_NARG(__VA_ARGS__)
 #define CALC_ARG_LENGTH(...) _CALC_ARG_LENGTH(__VA_ARGS__)
 #define CALC_ASM_LENGTH(...) CALC_ARG_LENGTH(__VA_ARGS__)
+#if defined(MEM_UCS)
+#define MEM_STR(str) CONCAT_STR(L, str)
+#elif defined(MEM_MBCS)
+#define MEM_STR(str) CONCAT_STR(str)
+#endif
 
 //Assembly
 
@@ -106,11 +112,11 @@
 
 //Compatibility
 
-#define MEM_COMPATIBLE_OS   defined(MEM_WIN) || defined(MEM_LINUX)
-#define MEM_COMPATIBLE_ARCH defined(MEM_86) || defined(MEM_64)
-#define MEM_COMPATIBLE MEM_COMPATIBLE_OS && MEM_COMPATIBLE_ARCH
+#if (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
+#define MEM_COMPATIBLE (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
+#endif //MEM_COMPATIBLE
 
-#if MEM_COMPATIBLE
+#if defined(MEM_COMPATIBLE)
 
 //Includes
 #include <iostream>
@@ -121,6 +127,9 @@
 #include <fstream>
 #include <sstream>
 #if defined(MEM_WIN)
+#include <Windows.h>
+#include <TlHelp32.h>
+#include <Psapi.h>
 #elif defined(MEM_LINUX)
 #include <fstream>
 #include <dirent.h>
@@ -192,6 +201,7 @@ namespace mem
         string_t name;
         pid_t    pid;
 #       if defined(MEM_WIN)
+		HANDLE handle;
 #       elif defined(MEM_LINUX)
 #       endif
     }process_t;
