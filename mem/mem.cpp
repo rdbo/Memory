@@ -315,7 +315,7 @@ mem::string_t mem::in::get_process_name()
 	char buffer[MAX_PATH];
 	GetModuleFileName(NULL, buffer, sizeof(buffer));
 	process_name = buffer;
-	process_name = process_name.substr(process_name.find('\\'), process_name.length());
+	process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
 #	elif defined(MEM_LINUX)
     process_name = mem::ex::get_process_name(get_pid());
 #	endif
@@ -333,7 +333,9 @@ mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 #   if defined(MEM_WIN)
 	MODULEINFO module_info;
 	HMODULE hmod = GetModuleHandle(module_name.c_str());
-	GetModuleInformation(NULL, hmod, &module_info, sizeof(module_info));
+	HANDLE cur_handle = mem::in::get_process().handle;
+	if (hmod == NULL || cur_handle == NULL) return modinfo;
+	GetModuleInformation(cur_handle, hmod, &module_info, sizeof(module_info));
 	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
 	modinfo.size = (size_t)module_info.SizeOfImage;
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
@@ -361,7 +363,9 @@ mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
 mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 {
 #   if defined(MEM_WIN)
-	VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, NULL);
+	if (src <= (voidptr_t)0 || size <= 0 || protection <= (int_t)0) return (int_t)MEM_BAD_RETURN;
+	DWORD old_protect;
+	VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
 #   elif defined(MEM_LINUX)
     long pagesize = sysconf(_SC_PAGE_SIZE);
 	uintptr_t src_page = (uintptr_t)src - ((uintptr_t)src % pagesize);
@@ -372,7 +376,7 @@ mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 
 mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, int_t protection)
 {
-    protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
+    return protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
 mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
@@ -390,12 +394,12 @@ mem::int_t mem::in::detour_length(detour_int method)
 {
     switch(method)
     {
-        case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0);
-        case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1);
-        case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2);
-        case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3);
-        case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4);
-        case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5);
+		case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
+        case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
+        case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
+        case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
+        case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
+        case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
     }
 
     return (mem::int_t)MEM_BAD_RETURN;
@@ -489,7 +493,7 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
     *(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
     size_t gateway_size = size + sizeof(gateway_buffer);
     voidptr_t gateway = allocate(gateway_size, protection);
-    if(!gateway || gateway == (voidptr_t)-1 || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+    if(!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
     set(gateway, 0x0, gateway_size);
     write(gateway, (byteptr_t)src, size);
     write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
@@ -520,13 +524,13 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
     mask = parse_mask(mask);
-	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
+	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
     if(mask.length() != pattern.length())
     
-	for (size_t i = 0; i < scan_size; i++)
+	for (uintptr_t i = 0; i < scan_size; i++)
 	{
 		bool found = true;
-		for (size_t j = 0; j < mask.length(); j++)
+		for (uintptr_t j = 0; j < mask.length(); j++)
 		{
 			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
 		}
