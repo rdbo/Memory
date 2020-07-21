@@ -126,6 +126,7 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 				if (pid == procEntry.th32ProcessID)
 				{
 					process_name = string_t(procEntry.szExeFile);
+					process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
 					break;
 				}
 			} while (Process32Next(hSnap, &procEntry));
@@ -159,6 +160,7 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
 	modinfo.size = (size_t)module_info.SizeOfImage;
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
+	modinfo.handle = hMod;
 
 #   elif defined(MEM_LINUX)
     char path_buffer[64];
@@ -258,14 +260,14 @@ mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t si
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
     mask = parse_mask(mask);
-	size_t scan_size = (uintptr_t)end - (uintptr_t)base;
+	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
     if(mask.length() != pattern.length())
     
-	for (size_t i = 0; i < scan_size; i++)
+	for (uintptr_t i = 0; i < scan_size; i++)
 	{
 		bool found = true;
         int8_t pbyte;
-		for (size_t j = 0; j < mask.length(); j++)
+		for (uintptr_t j = 0; j < mask.length(); j++)
 		{
             read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
 			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
@@ -339,6 +341,7 @@ mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
 	modinfo.size = (size_t)module_info.SizeOfImage;
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
+	modinfo.handle = hmod;
 #   elif defined(MEM_LINUX)
     modinfo = get_module_info(get_process(), module_name);
 #   endif
@@ -365,7 +368,7 @@ mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 #   if defined(MEM_WIN)
 	if (src <= (voidptr_t)0 || size <= 0 || protection <= (int_t)0) return (int_t)MEM_BAD_RETURN;
 	DWORD old_protect;
-	VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
+	return (mem::int_t)VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
 #   elif defined(MEM_LINUX)
     long pagesize = sysconf(_SC_PAGE_SIZE);
 	uintptr_t src_page = (uintptr_t)src - ((uintptr_t)src % pagesize);
@@ -405,7 +408,7 @@ mem::int_t mem::in::detour_length(detour_int method)
     return (mem::int_t)MEM_BAD_RETURN;
 }
 
-mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size)
+mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method)
 {
     int_t detour_size = detour_length(method);
     #if defined(MEM_WIN)
@@ -413,12 +416,10 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_
     #elif defined(MEM_LINUX)
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
     #endif
-    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, protection, size) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
-
+    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
     byte_t* stolen_bytes = new byte_t[size];
     write(stolen_bytes, (byteptr_t)src, size);
     g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
-
     switch(method)
     {
         case detour_int::method0:
@@ -479,7 +480,7 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, detour_int method, int_
     return !(MEM_BAD_RETURN);
 }
 
-mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out)
+mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, voidptr_t gateway_out)
 {
     int_t detour_size = detour_length(method);
     #if defined(MEM_WIN)
@@ -487,7 +488,8 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
     #elif defined(MEM_LINUX)
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
     #endif
-    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, protection, size) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+
+    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 
     byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
     *(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
@@ -504,7 +506,7 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, detour_i
     #endif
 
     protect(gateway, gateway_size, protection);
-    detour(src, dst, method, size);
+    detour(src, dst, size, method);
     return gateway;
 }
 
@@ -516,7 +518,7 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
     int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #   endif
 
-    size_t size = g_detour_restore_array[src].length();
+    size_t size = (size_t)g_detour_restore_array[src].length();
     protect(src, protection, size);
     write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
 }

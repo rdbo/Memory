@@ -31,15 +31,51 @@
 
 //Functions
 
-#ifdef _MSC_VER // Microsoft compilers
-#define EXPAND(x) x
-#define __NARGS(_1, _2, _3, _4, _5, VAL, ...) VAL
-#define NARGS_1(...) EXPAND(__NARGS(__VA_ARGS__, 4, 3, 2, 1, 0))
-#define AUGMENTER(...) unused, __VA_ARGS__
-#define NARGS(...) NARGS_1(AUGMENTER(__VA_ARGS__))
+#if defined(_MSC_VER)
+#define PP_NARG(...) _COUNTOF_CAT( _COUNTOF_A, ( 0, ##__VA_ARGS__, 100,\
+    99, 98, 97, 96, 95, 94, 93, 92, 91, 90,\
+    89, 88, 87, 86, 85, 84, 83, 82, 81, 80,\
+    79, 78, 77, 76, 75, 74, 73, 72, 71, 70,\
+    69, 68, 67, 66, 65, 64, 63, 62, 61, 60,\
+    59, 58, 57, 56, 55, 54, 53, 52, 51, 50,\
+    49, 48, 47, 46, 45, 44, 43, 42, 41, 40,\
+    39, 38, 37, 36, 35, 34, 33, 32, 31, 30,\
+    29, 28, 27, 26, 25, 24, 23, 22, 21, 20,\
+    19, 18, 17, 16, 15, 14, 13, 12, 11, 10,\
+    9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ) )
+#define _COUNTOF_CAT( a, b ) a b
+#define _COUNTOF_A( a0, a1, a2, a3, a4, a5, a6, a7, a8, a9,\
+    a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,\
+    a20, a21, a22, a23, a24, a25, a26, a27, a28, a29,\
+    a30, a31, a32, a33, a34, a35, a36, a37, a38, a39,\
+    a40, a41, a42, a43, a44, a45, a46, a47, a48, a49,\
+    a50, a51, a52, a53, a54, a55, a56, a57, a58, a59,\
+    a60, a61, a62, a63, a64, a65, a66, a67, a68, a69,\
+    a70, a71, a72, a73, a74, a75, a76, a77, a78, a79,\
+    a80, a81, a82, a83, a84, a85, a86, a87, a88, a89,\
+    a90, a91, a92, a93, a94, a95, a96, a97, a98, a99,\
+    a100, n, ... ) n
 #else
-#define NARGS(...) __NARGS(0, ## __VA_ARGS__, 5,4,3,2,1,0)
-#define __NARGS(_0,_1,_2,_3,_4,_5,N,...) N
+#define PP_NARG(...) \
+         PP_NARG_(__VA_ARGS__,PP_RSEQ_N())
+#define PP_NARG_(...) \
+         PP_ARG_N(__VA_ARGS__)
+#define PP_ARG_N( \
+          _1, _2, _3, _4, _5, _6, _7, _8, _9,_10, \
+         _11,_12,_13,_14,_15,_16,_17,_18,_19,_20, \
+         _21,_22,_23,_24,_25,_26,_27,_28,_29,_30, \
+         _31,_32,_33,_34,_35,_36,_37,_38,_39,_40, \
+         _41,_42,_43,_44,_45,_46,_47,_48,_49,_50, \
+         _51,_52,_53,_54,_55,_56,_57,_58,_59,_60, \
+         _61,_62,_63,N,...) N
+#define PP_RSEQ_N() \
+         63,62,61,60,                   \
+         59,58,57,56,55,54,53,52,51,50, \
+         49,48,47,46,45,44,43,42,41,40, \
+         39,38,37,36,35,34,33,32,31,30, \
+         29,28,27,26,25,24,23,22,21,20, \
+         19,18,17,16,15,14,13,12,11,10, \
+         9,8,7,6,5,4,3,2,1,0
 #endif
 
 #define PAD_STR __pad
@@ -51,7 +87,7 @@
 #define CREATE_UNION_MEMBER(type, varname, offset) struct { unsigned char NEW_PAD(offset); type varname; } //Create relative offset variable from union
 #define _BUFFER_GENERATE(...) { __VA_ARGS__ }
 #define ASM_GENERATE(...) _BUFFER_GENERATE(__VA_ARGS__)
-#define _CALC_ARG_LENGTH(...) NARGS(__VA_ARGS__)
+#define _CALC_ARG_LENGTH(...) PP_NARG(__VA_ARGS__)
 #define CALC_ARG_LENGTH(...) _CALC_ARG_LENGTH(__VA_ARGS__)
 #define CALC_ASM_LENGTH(...) CALC_ARG_LENGTH(__VA_ARGS__)
 #if defined(MEM_UCS)
@@ -110,6 +146,7 @@
 
 //Includes
 #include <iostream>
+#include <stdio.h>
 #include <array>
 #include <vector>
 #include <map>
@@ -182,6 +219,7 @@ namespace mem
         uintptr_t size = (uintptr_t)MEM_BAD_RETURN;
         voidptr_t end  = (voidptr_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
+		HMODULE   handle;
 #       elif defined(MEM_LINUX)
 #       endif
     }moduleinfo_t;
@@ -191,7 +229,7 @@ namespace mem
         string_t name = "";
         pid_t    pid = (pid_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
-		HANDLE handle;
+		HANDLE handle = NULL;
 #       elif defined(MEM_LINUX)
 #       endif
     }process_t;
@@ -259,8 +297,8 @@ namespace mem
         int_t        protect(voidptr_t begin, voidptr_t end, int_t protection);
         voidptr_t    allocate(size_t size, int_t protection);
         int_t        detour_length(detour_int method);
-        int_t        detour(voidptr_t src, voidptr_t dst, detour_int method, int_t size);
-        voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, detour_int method, int_t size, voidptr_t gateway_out = NULL);
+        int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
+        voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
         void_t       detour_restore(voidptr_t src);
     }
 }
