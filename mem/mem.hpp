@@ -172,139 +172,139 @@
 
 namespace mem
 {
-    typedef bool               bool_t;
+	typedef bool               bool_t;
 #	if defined(MEM_UCS)
 	typedef wchar_t            char_t;
 #	elif defined(MEM_MBCS)
-    typedef char               char_t;
+	typedef char               char_t;
 #	endif
-    typedef int                int_t;
-    typedef void               void_t;
+	typedef int                int_t;
+	typedef void               void_t;
 
-    typedef char               int8_t;
-    typedef short              int16_t;
-    typedef int                int32_t;
-    typedef long long          int64_t;
+	typedef char               int8_t;
+	typedef short              int16_t;
+	typedef int                int32_t;
+	typedef long long          int64_t;
 
-    typedef unsigned char      uint8_t;
-    typedef unsigned short     uint16_t;
-    typedef unsigned int       uint32_t;
-    typedef unsigned long long uint64_t;
+	typedef unsigned char      uint8_t;
+	typedef unsigned short     uint16_t;
+	typedef unsigned int       uint32_t;
+	typedef unsigned long long uint64_t;
 
 #   if defined(MEM_WIN)
-    typedef uint32_t pid_t;
+	typedef uint32_t pid_t;
 #   elif defined(MEM_LINUX)
-    typedef int32_t  pid_t;
+	typedef int32_t  pid_t;
 #   endif
 
 #   if defined(MEM_86)
-    typedef int32_t  intptr_t;
-    typedef uint32_t uintptr_t;
+	typedef int32_t  intptr_t;
+	typedef uint32_t uintptr_t;
 #   elif defined(MEM_64)
-    typedef int64_t  intptr_t;
-    typedef uint64_t uintptr_t;
+	typedef int64_t  intptr_t;
+	typedef uint64_t uintptr_t;
 #   endif
 
-    typedef uint8_t  byte_t;
-    typedef uint16_t word_t;
-    typedef uint32_t dword_t;
-    typedef uint64_t qword_t;
+	typedef uint8_t  byte_t;
+	typedef uint16_t word_t;
+	typedef uint32_t dword_t;
+	typedef uint64_t qword_t;
 
-    typedef byte_t*                   byteptr_t;
-    typedef std::basic_string<int8_t> bytearray_t;
-    typedef void_t*                   voidptr_t;
-    typedef unsigned long             size_t;
-    typedef std::basic_string<char_t> string_t;
+	typedef byte_t* byteptr_t;
+	typedef std::basic_string<int8_t> bytearray_t;
+	typedef void_t* voidptr_t;
+	typedef unsigned long             size_t;
+	typedef std::basic_string<char_t> string_t;
 
-    typedef struct
-    {
-        string_t  name = MEM_STR("");
-        voidptr_t base = (voidptr_t)MEM_BAD_RETURN;
-        uintptr_t size = (uintptr_t)MEM_BAD_RETURN;
-        voidptr_t end  = (voidptr_t)MEM_BAD_RETURN;
+	typedef struct
+	{
+		string_t  name = MEM_STR("");
+		voidptr_t base = (voidptr_t)MEM_BAD_RETURN;
+		uintptr_t size = (uintptr_t)MEM_BAD_RETURN;
+		voidptr_t end = (voidptr_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
 		HMODULE   handle;
 #       elif defined(MEM_LINUX)
 #       endif
-    }moduleinfo_t;
+	}moduleinfo_t;
 
-    typedef struct
-    {
-        string_t name = MEM_STR("");
-        pid_t    pid = (pid_t)MEM_BAD_RETURN;
+	typedef struct
+	{
+		string_t name = MEM_STR("");
+		pid_t    pid = (pid_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
 		HANDLE handle = NULL;
 #       elif defined(MEM_LINUX)
 #       endif
-    }process_t;
+	}process_t;
 
-    enum class detour_int
-    {
-        method0,
-        method1,
-        method2,
-        method3,
-        method4,
-        method5
-    };
+	enum class detour_int
+	{
+		method0,
+		method1,
+		method2,
+		method3,
+		method4,
+		method5
+	};
 
-    string_t parse_mask(string_t mask);
+	string_t parse_mask(string_t mask);
 
-    namespace ex
-    {
-        pid_t        get_pid (string_t process_name);
-        process_t    get_process(string_t process_name);
-        process_t    get_process(pid_t pid);
-        string_t     get_process_name(pid_t pid);
-        moduleinfo_t get_module_info (process_t process, string_t module_name);
-        bool_t       is_process_running(process_t process);
-        int_t        read  (process_t process, voidptr_t src, voidptr_t dst,  size_t size);
-        template <typename type_t> type_t read(process_t process, voidptr_t src)
-        {
-            type_t holder;
-            read(process, src, &holder, sizeof(holder));
-            return holder;
-        }
-        int_t        write (process_t process, voidptr_t src, voidptr_t data, size_t size);
-        template <typename type_t> void_t write(process_t process, voidptr_t src, type_t value)
-        {
-            write(process, src, new type_t(value), sizeof(type_t));
-        }
-        int_t        set   (process_t process, voidptr_t src, byte_t byte,    size_t size);
-        voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
-    }
+	namespace ex
+	{
+		pid_t        get_pid(string_t process_name);
+		process_t    get_process(string_t process_name);
+		process_t    get_process(pid_t pid);
+		string_t     get_process_name(pid_t pid);
+		moduleinfo_t get_module_info(process_t process, string_t module_name);
+		bool_t       is_process_running(process_t process);
+		int_t        read(process_t process, voidptr_t src, voidptr_t dst, size_t size);
+		template <typename type_t> type_t read(process_t process, voidptr_t src)
+		{
+			type_t holder;
+			read(process, src, &holder, sizeof(holder));
+			return holder;
+		}
+		int_t        write(process_t process, voidptr_t src, voidptr_t data, size_t size);
+		template <typename type_t> void_t write(process_t process, voidptr_t src, type_t value)
+		{
+			write(process, src, new type_t(value), sizeof(type_t));
+		}
+		int_t        set(process_t process, voidptr_t src, byte_t byte, size_t size);
+		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+	}
 
-    namespace in
-    {
-        pid_t        get_pid();
-        process_t    get_process();
-        string_t     get_process_name();
-        moduleinfo_t get_module_info(process_t process, string_t module_name);
-        moduleinfo_t get_module_info(string_t module_name);
-        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
-        voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
-        void_t       read (voidptr_t src, voidptr_t dst,  size_t size);
-        template <typename type_t> type_t read(voidptr_t src)
-        {
-            type_t holder;
-            read(src, &holder, sizeof(holder));
-            return holder;
-        }
-        void_t       write(voidptr_t src, voidptr_t data, size_t size);
-        template <typename type_t> void_t write(voidptr_t src, type_t value)
-        {
-            write(src, new type_t(value), sizeof(type_t));
-        }
-        void_t       set(voidptr_t src, byte_t byte, size_t size);
-        int_t        protect(voidptr_t src, size_t size, int_t protection);
-        int_t        protect(voidptr_t begin, voidptr_t end, int_t protection);
-        voidptr_t    allocate(size_t size, int_t protection);
-        int_t        detour_length(detour_int method);
-        int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
-        voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
-        void_t       detour_restore(voidptr_t src);
-    }
+	namespace in
+	{
+		pid_t        get_pid();
+		process_t    get_process();
+		string_t     get_process_name();
+		moduleinfo_t get_module_info(process_t process, string_t module_name);
+		moduleinfo_t get_module_info(string_t module_name);
+		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
+		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+		void_t       read(voidptr_t src, voidptr_t dst, size_t size);
+		template <typename type_t> type_t read(voidptr_t src)
+		{
+			type_t holder;
+			read(src, &holder, sizeof(holder));
+			return holder;
+		}
+		void_t       write(voidptr_t src, voidptr_t data, size_t size);
+		template <typename type_t> void_t write(voidptr_t src, type_t value)
+		{
+			write(src, new type_t(value), sizeof(type_t));
+		}
+		void_t       set(voidptr_t src, byte_t byte, size_t size);
+		int_t        protect(voidptr_t src, size_t size, int_t protection);
+		int_t        protect(voidptr_t begin, voidptr_t end, int_t protection);
+		voidptr_t    allocate(size_t size, int_t protection);
+		int_t        detour_length(detour_int method);
+		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
+		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
+		void_t       detour_restore(voidptr_t src);
+	}
 }
 
 #endif //MEM_COMPATIBLE

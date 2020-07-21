@@ -4,22 +4,22 @@
 #include "mem.hpp"
 #if defined(MEM_COMPATIBLE)
 
-const mem::byte_t MEM_JMP[]        = ASM_GENERATE(_MEM_JMP);
-const mem::byte_t MEM_JMP_RAX[]    = ASM_GENERATE(_MEM_JMP_RAX);
-const mem::byte_t MEM_JMP_EAX[]    = ASM_GENERATE(_MEM_JMP_EAX);
-const mem::byte_t MEM_CALL[]       = ASM_GENERATE(_MEM_CALL);
-const mem::byte_t MEM_CALL_EAX[]   = ASM_GENERATE(_MEM_CALL_EAX);
-const mem::byte_t MEM_CALL_RAX[]   = ASM_GENERATE(_MEM_CALL_RAX);
+const mem::byte_t MEM_JMP[] = ASM_GENERATE(_MEM_JMP);
+const mem::byte_t MEM_JMP_RAX[] = ASM_GENERATE(_MEM_JMP_RAX);
+const mem::byte_t MEM_JMP_EAX[] = ASM_GENERATE(_MEM_JMP_EAX);
+const mem::byte_t MEM_CALL[] = ASM_GENERATE(_MEM_CALL);
+const mem::byte_t MEM_CALL_EAX[] = ASM_GENERATE(_MEM_CALL_EAX);
+const mem::byte_t MEM_CALL_RAX[] = ASM_GENERATE(_MEM_CALL_RAX);
 const mem::byte_t MEM_MOVABS_RAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
-const mem::byte_t MEM_MOV_EAX[]    = ASM_GENERATE(_MEM_MOV_EAX);
-const mem::byte_t MEM_PUSH[]       = ASM_GENERATE(_MEM_PUSH);
-const mem::byte_t MEM_PUSH_RAX[]   = ASM_GENERATE(_MEM_PUSH_RAX);
-const mem::byte_t MEM_PUSH_EAX[]   = ASM_GENERATE(_MEM_PUSH_EAX);
-const mem::byte_t MEM_RET[]        = ASM_GENERATE(_MEM_RET);
-const mem::byte_t MEM_BYTE[]       = ASM_GENERATE(_MEM_BYTE);
-const mem::byte_t MEM_WORD[]       = ASM_GENERATE(_MEM_WORD);
-const mem::byte_t MEM_DWORD[]      = ASM_GENERATE(_MEM_DWORD);
-const mem::byte_t MEM_QWORD[]      = ASM_GENERATE(_MEM_QWORD);
+const mem::byte_t MEM_MOV_EAX[] = ASM_GENERATE(_MEM_MOV_EAX);
+const mem::byte_t MEM_PUSH[] = ASM_GENERATE(_MEM_PUSH);
+const mem::byte_t MEM_PUSH_RAX[] = ASM_GENERATE(_MEM_PUSH_RAX);
+const mem::byte_t MEM_PUSH_EAX[] = ASM_GENERATE(_MEM_PUSH_EAX);
+const mem::byte_t MEM_RET[] = ASM_GENERATE(_MEM_RET);
+const mem::byte_t MEM_BYTE[] = ASM_GENERATE(_MEM_BYTE);
+const mem::byte_t MEM_WORD[] = ASM_GENERATE(_MEM_WORD);
+const mem::byte_t MEM_DWORD[] = ASM_GENERATE(_MEM_DWORD);
+const mem::byte_t MEM_QWORD[] = ASM_GENERATE(_MEM_QWORD);
 #if defined(MEM_86)
 const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOV_EAX);
 #elif defined(MEM_64)
@@ -32,10 +32,10 @@ std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
 
 mem::string_t mem::parse_mask(string_t mask)
 {
-    for(size_t i = 0; i < mask.length(); i++)
-        mask[i] = mask.at(i) == MEM_KNOWN_BYTE || mask.at(i) == (char)toupper(MEM_KNOWN_BYTE) ? MEM_KNOWN_BYTE : MEM_UNKNOWN_BYTE;
+	for (size_t i = 0; i < mask.length(); i++)
+		mask[i] = mask.at(i) == MEM_KNOWN_BYTE || mask.at(i) == (char)toupper(MEM_KNOWN_BYTE) ? MEM_KNOWN_BYTE : MEM_UNKNOWN_BYTE;
 
-    return mask;
+	return mask;
 }
 
 //mem::ex
@@ -76,8 +76,8 @@ mem::pid_t mem::ex::get_pid(string_t process_name)
 		if (id > 0)
 		{
 			std::string proc_name = get_process_name(id);
-            if(!strcmp(proc_name.c_str(), process_name.c_str()))
-                pid = id;
+			if (!strcmp(proc_name.c_str(), process_name.c_str()))
+				pid = id;
 		}
 	}
 	closedir(pdir);
@@ -94,24 +94,24 @@ mem::process_t mem::ex::get_process(string_t process_name)
 	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
 #	elif defined(MEM_LINUX)
 #	endif
-    return process;
+	return process;
 }
 
 mem::process_t mem::ex::get_process(pid_t pid)
 {
-    process_t process{};
+	process_t process{};
 	process.name = get_process_name(pid);
 	process.pid = pid;
 #	if defined(MEM_WIN)
 	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
 #	elif defined(MEM_LINUX)
 #	endif
-    return process;
+	return process;
 }
 
 mem::string_t mem::ex::get_process_name(pid_t pid)
 {
-    mem::string_t process_name;
+	mem::string_t process_name;
 #   if defined(MEM_WIN)
 	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnap != INVALID_HANDLE_VALUE)
@@ -134,24 +134,24 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 	}
 	CloseHandle(hSnap);
 #   elif defined(MEM_LINUX)
-    char path_buffer[64];
-    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
-    std::ifstream file(path_buffer, std::ios::binary);
-    if(!file.is_open()) return process_name;
-    std::stringstream ss;
-    ss << file.rdbuf();
-    std::size_t end = ss.str().find('\n', 0);
-    std::size_t begin = ss.str().rfind('/', end) + 1;
-    if(end == -1 || begin == -1 || begin == 0) return process_name;
-    process_name = ss.str().substr(begin, end - begin);
-    file.close();
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
+	std::ifstream file(path_buffer, std::ios::binary);
+	if (!file.is_open()) return process_name;
+	std::stringstream ss;
+	ss << file.rdbuf();
+	std::size_t end = ss.str().find('\n', 0);
+	std::size_t begin = ss.str().rfind('/', end) + 1;
+	if (end == -1 || begin == -1 || begin == 0) return process_name;
+	process_name = ss.str().substr(begin, end - begin);
+	file.close();
 #   endif
-    return process_name;
+	return process_name;
 }
 
 mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_name)
 {
-    moduleinfo_t modinfo{};
+	moduleinfo_t modinfo{};
 #   if defined(MEM_WIN)
 	HMODULE hMod;
 	GetModuleHandleEx(NULL, module_name.c_str(), &hMod);
@@ -163,43 +163,43 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	modinfo.handle = hMod;
 
 #   elif defined(MEM_LINUX)
-    char path_buffer[64];
-    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", process.pid);
-    std::ifstream file(path_buffer, std::ios::binary);
-    if(!file.is_open()) return modinfo;
-    std::stringstream ss;
-    ss << file.rdbuf();
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", process.pid);
+	std::ifstream file(path_buffer, std::ios::binary);
+	if (!file.is_open()) return modinfo;
+	std::stringstream ss;
+	ss << file.rdbuf();
 
-    std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
-    std::size_t module_name_end = ss.str().find('\n', module_name_pos);
-    std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
+	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
+	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
+	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
 
-    std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
-    std:size_t base_address_end = ss.str().find('-', base_address_pos);
-    std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
+	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
+	std:size_t base_address_end = ss.str().find('-', base_address_pos);
+	std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
 
-    std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
-    end_address_pos = ss.str().find('-', end_address_pos) + 1;
-    std::size_t end_address_end = ss.str().find(' ', end_address_pos);
-    std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
+	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
+	end_address_pos = ss.str().find('-', end_address_pos) + 1;
+	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
+	std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
 
 #   if defined(MEM_86)
-    mem::uintptr_t base_address = strtoul(base_address_str.c_str(), NULL, 16);
-    mem::uintptr_t end_address = strtoul(end_address_str.c_str(), NULL, 16);
+	mem::uintptr_t base_address = strtoul(base_address_str.c_str(), NULL, 16);
+	mem::uintptr_t end_address = strtoul(end_address_str.c_str(), NULL, 16);
 #   elif defined(MEM_64)
-    mem::uintptr_t base_address = strtoull(base_address_str.c_str(), NULL, 16);
-    mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
+	mem::uintptr_t base_address = strtoull(base_address_str.c_str(), NULL, 16);
+	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-    modinfo.name = module_name_str;
-    modinfo.base = (mem::voidptr_t)base_address;
-    modinfo.end = (mem::voidptr_t)end_address;
-    modinfo.size = end_address - base_address;
-    file.close();
+	modinfo.name = module_name_str;
+	modinfo.base = (mem::voidptr_t)base_address;
+	modinfo.end = (mem::voidptr_t)end_address;
+	modinfo.size = end_address - base_address;
+	file.close();
 
 #   endif
 
-    return modinfo;
+	return modinfo;
 }
 
 mem::bool_t mem::ex::is_process_running(process_t process)
@@ -209,13 +209,13 @@ mem::bool_t mem::ex::is_process_running(process_t process)
 	GetExitCodeProcess(process.handle, &exit_code);
 	return (bool_t)(exit_code == STILL_ACTIVE);
 #   elif defined(MEM_LINUX)
-    struct stat sb;
-    char path_buffer[64];
-    snprintf(path_buffer, sizeof(path_buffer), "/proc/%i", process.pid);
-    stat(path_buffer, &sb);
-    return (bool_t)S_ISDIR(sb.st_mode);
+	struct stat sb;
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i", process.pid);
+	stat(path_buffer, &sb);
+	return (bool_t)S_ISDIR(sb.st_mode);
 #   endif
-    return (bool_t)MEM_BAD_RETURN;
+	return (bool_t)MEM_BAD_RETURN;
 }
 
 mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
@@ -223,7 +223,7 @@ mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t
 #   if defined(MEM_WIN)
 	return (int_t)ReadProcessMemory(process.handle, (LPCVOID)src, (LPVOID)dst, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
-    struct iovec iosrc;
+	struct iovec iosrc;
 	struct iovec iodst;
 	iodst.iov_base = dst;
 	iodst.iov_len = size;
@@ -231,7 +231,7 @@ mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t
 	iosrc.iov_len = size;
 	return process_vm_readv(process.pid, &iodst, 1, &iosrc, 1, 0);
 #   endif
-    return MEM_BAD_RETURN;
+	return MEM_BAD_RETURN;
 }
 
 mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size_t size)
@@ -239,7 +239,7 @@ mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size
 #   if defined(MEM_WIN)
 	return (int_t)WriteProcessMemory(process.handle, (LPVOID)src, (LPCVOID)data, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
-    struct iovec iosrc;
+	struct iovec iosrc;
 	struct iovec iodst;
 	iosrc.iov_base = data;
 	iosrc.iov_len = size;
@@ -247,41 +247,41 @@ mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size
 	iodst.iov_len = size;
 	return process_vm_writev(process.pid, &iosrc, 1, &iodst, 1, 0);
 #   endif
-    return MEM_BAD_RETURN;
+	return MEM_BAD_RETURN;
 }
 
 mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
 {
-    byte_t* data = new byte_t[size];
-    mem::in::set(data, byte, size);
-    return write(process, src, data, size);
+	byte_t* data = new byte_t[size];
+	mem::in::set(data, byte, size);
+	return write(process, src, data, size);
 }
 
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
-    mask = parse_mask(mask);
+	mask = parse_mask(mask);
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-    if(mask.length() != pattern.length())
-    
-	for (uintptr_t i = 0; i < scan_size; i++)
-	{
-		bool found = true;
-        int8_t pbyte;
-		for (uintptr_t j = 0; j < mask.length(); j++)
-		{
-            read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
-			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
-		}
+	if (mask.length() != pattern.length())
 
-		if (found) return (voidptr_t)((uintptr_t)base + i);
-	}
+		for (uintptr_t i = 0; i < scan_size; i++)
+		{
+			bool found = true;
+			int8_t pbyte;
+			for (uintptr_t j = 0; j < mask.length(); j++)
+			{
+				read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
+				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
+			}
+
+			if (found) return (voidptr_t)((uintptr_t)base + i);
+		}
 
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
-    return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+	return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 //mem::in
@@ -291,23 +291,23 @@ mem::pid_t mem::in::get_pid()
 #   if defined(MEM_WIN)
 	return (pid_t)::GetCurrentProcessId();
 #   elif defined(MEM_LINUX)
-    return (pid_t)::getpid();
+	return (pid_t)::getpid();
 #   endif
-    return (pid_t)MEM_BAD_RETURN;
+	return (pid_t)MEM_BAD_RETURN;
 }
 
 mem::process_t mem::in::get_process()
 {
-    process_t process{};
+	process_t process{};
 
-    process.pid = get_pid();
-    process.name = get_process_name();
+	process.pid = get_pid();
+	process.name = get_process_name();
 #	if defined(MEM_WIN)
 	process.handle = GetCurrentProcess();
 #	elif defined(MEM_LINUX)
 #	endif
 
-    return process;
+	return process;
 }
 
 mem::string_t mem::in::get_process_name()
@@ -315,18 +315,18 @@ mem::string_t mem::in::get_process_name()
 	mem::string_t process_name;
 #	if defined(MEM_WIN)
 	char_t buffer[MAX_PATH * sizeof(char_t)];
-	GetModuleFileName(NULL, buffer, sizeof(buffer));
+	GetModuleFileName(NULL, buffer, sizeof(buffer)/sizeof(char_t));
 	process_name = buffer;
 	process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
 #	elif defined(MEM_LINUX)
-    process_name = mem::ex::get_process_name(get_pid());
+	process_name = mem::ex::get_process_name(get_pid());
 #	endif
 	return process_name;
 }
 
 mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_name)
 {
-    return mem::ex::get_module_info(process, module_name);
+	return mem::ex::get_module_info(process, module_name);
 }
 
 mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
@@ -343,43 +343,44 @@ mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
 	modinfo.handle = hmod;
 #   elif defined(MEM_LINUX)
-    modinfo = get_module_info(get_process(), module_name);
+	modinfo = get_module_info(get_process(), module_name);
 #   endif
 	return modinfo;
 }
 
-mem::void_t mem::in::read (voidptr_t src, voidptr_t dst,  size_t size)
+mem::void_t mem::in::read(voidptr_t src, voidptr_t dst, size_t size)
 {
-    memcpy(dst, src, size);
+	memcpy(dst, src, size);
 }
 
 mem::void_t mem::in::write(voidptr_t src, voidptr_t data, size_t size)
 {
-    memcpy(src, data, size);
+	memcpy(src, data, size);
 }
 
 mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
 {
-    memset(src, byte, size);
+	memset(src, byte, size);
 }
 
 mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 {
+	int_t ret = (int_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
-	if (src <= (voidptr_t)0 || size <= 0 || protection <= (int_t)0) return (int_t)MEM_BAD_RETURN;
+	if (src <= (voidptr_t)0 || size <= 0 || protection <= (int_t)0) return ret;
 	DWORD old_protect;
-	return (mem::int_t)VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
+	ret = (int_t)VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
 #   elif defined(MEM_LINUX)
-    long pagesize = sysconf(_SC_PAGE_SIZE);
+	long pagesize = sysconf(_SC_PAGE_SIZE);
 	uintptr_t src_page = (uintptr_t)src - ((uintptr_t)src % pagesize);
-	return mprotect((voidptr_t)src_page, size, protection);
+	ret = (int_t)mprotect((voidptr_t)src_page, size, protection);
 #   endif
-    return (int_t)MEM_BAD_RETURN;
+	return ret;
 }
 
 mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, int_t protection)
 {
-    return protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
+	return protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
 mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
@@ -388,126 +389,126 @@ mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
 #   if defined(MEM_WIN)
 	addr = VirtualAlloc(NULL, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, (DWORD)protection);
 #   elif defined(MEM_LINUX)
-    addr = mmap(NULL, size, protection, MAP_ANON | MAP_PRIVATE, -1, 0);
+	addr = mmap(NULL, size, protection, MAP_ANON | MAP_PRIVATE, -1, 0);
 #   endif
 	return addr;
 }
 
 mem::int_t mem::in::detour_length(detour_int method)
 {
-    switch(method)
-    {
-		case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
-        case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
-        case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
-        case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
-        case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
-        case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
-    }
+	switch (method)
+	{
+	case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
+	case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
+	case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
+	case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
+	case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
+	case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
+	}
 
-    return (mem::int_t)MEM_BAD_RETURN;
+	return (mem::int_t)MEM_BAD_RETURN;
 }
 
 mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method)
 {
-    int_t detour_size = detour_length(method);
-    #if defined(MEM_WIN)
+	int_t detour_size = detour_length(method);
+#	if defined(MEM_WIN)
 	int_t protection = PAGE_EXECUTE_READWRITE;
-    #elif defined(MEM_LINUX)
-    int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
-    #endif
-    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
-    byte_t* stolen_bytes = new byte_t[size];
-    write(stolen_bytes, (byteptr_t)src, size);
-    g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
-    switch(method)
-    {
-        case detour_int::method0:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
-            *(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+#	elif defined(MEM_LINUX)
+	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+#	endif
+	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
+	byte_t * stolen_bytes = new byte_t[size];
+	write(stolen_bytes, (byteptr_t)src, size);
+	g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
+	switch (method)
+	{
+	case detour_int::method0:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        case detour_int::method1:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD1);
-            *(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_JMP)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+	case detour_int::method1:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD1);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_JMP)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        case detour_int::method2:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD2);
-            *(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+	case detour_int::method2:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD2);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        case detour_int::method3:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD3);
-            *(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_PUSH)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+	case detour_int::method3:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD3);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_PUSH)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        case detour_int::method4:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD4);
-            *(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+	case detour_int::method4:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD4);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        case detour_int::method5:
-        {
-            byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD5);
-            *(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_CALL)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
-            write(src, detour_buffer, sizeof(detour_buffer));
-            break;
-        }
+	case detour_int::method5:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD5);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_CALL)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
 
-        default:
-        {
-            return (mem::int_t)MEM_BAD_RETURN;
-            break;
-        }
-    }
+	default:
+	{
+		return (mem::int_t)MEM_BAD_RETURN;
+		break;
+	}
+	}
 
-    return !(MEM_BAD_RETURN);
+	return !(MEM_BAD_RETURN);
 }
 
 mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, voidptr_t gateway_out)
 {
-    int_t detour_size = detour_length(method);
-    #if defined(MEM_WIN)
+	int_t detour_size = detour_length(method);
+#	if defined(MEM_WIN)
 	int_t protection = PAGE_EXECUTE_READWRITE;
-    #elif defined(MEM_LINUX)
-    int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
-    #endif
+#	elif defined(MEM_LINUX)
+	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+#	endif
 
-    if(detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 
-    byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
-    *(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
-    size_t gateway_size = size + sizeof(gateway_buffer);
-    voidptr_t gateway = allocate(gateway_size, protection);
-    if(!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
-    set(gateway, 0x0, gateway_size);
-    write(gateway, (byteptr_t)src, size);
-    write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
+	byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
+	*(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
+	size_t gateway_size = size + sizeof(gateway_buffer);
+	voidptr_t gateway = allocate(gateway_size, protection);
+	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+	set(gateway, 0x0, gateway_size);
+	write(gateway, (byteptr_t)src, size);
+	write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
 
-    #if defined(MEM_WIN)
-    #elif defined(MEM_LINUX)
-    protection = PROT_EXEC | PROT_READ;
-    #endif
+#if defined(MEM_WIN)
+#elif defined(MEM_LINUX)
+	protection = PROT_EXEC | PROT_READ;
+#endif
 
-    protect(gateway, gateway_size, protection);
-    detour(src, dst, size, method);
-    return gateway;
+	protect(gateway, gateway_size, protection);
+	detour(src, dst, size, method);
+	return gateway;
 }
 
 mem::void_t mem::in::detour_restore(voidptr_t src)
@@ -515,37 +516,37 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
 #   if defined(MEM_WIN)
 	int_t protection = PAGE_EXECUTE_READWRITE;
 #   elif defined(MEM_LINUX)
-    int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #   endif
 
-    size_t size = (size_t)g_detour_restore_array[src].length();
-    protect(src, protection, size);
-    write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
+	size_t size = (size_t)g_detour_restore_array[src].length();
+	protect(src, protection, size);
+	write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
 }
 
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
-    mask = parse_mask(mask);
+	mask = parse_mask(mask);
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-    if(mask.length() != pattern.length())
-    
-	for (uintptr_t i = 0; i < scan_size; i++)
-	{
-		bool found = true;
-		for (uintptr_t j = 0; j < mask.length(); j++)
-		{
-			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
-		}
+	if (mask.length() != pattern.length())
 
-		if (found) return (voidptr_t)((uintptr_t)base + i);
-	}
+		for (uintptr_t i = 0; i < scan_size; i++)
+		{
+			bool found = true;
+			for (uintptr_t j = 0; j < mask.length(); j++)
+			{
+				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
+			}
+
+			if (found) return (voidptr_t)((uintptr_t)base + i);
+		}
 
 	return (mem::voidptr_t)MEM_BAD_RETURN;
 }
 
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
-    return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
 #endif //MEM_COMPATIBLE
