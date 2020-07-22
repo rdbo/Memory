@@ -271,8 +271,12 @@ namespace mem
 			write(process, src, new type_t(value), sizeof(type_t));
 		}
 		int_t        set(process_t process, voidptr_t src, byte_t byte, size_t size);
+		int_t        protect(process_t process, voidptr_t src, size_t size, int_t protection);
+		int_t        protect(process_t process, voidptr_t begin, voidptr_t end, int_t protection);
+		voidptr_t    allocate(process_t process, size_t size, int_t protection);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
+		int_t        load_library(process_t process, string_t libpath);
 	}
 
 	namespace in

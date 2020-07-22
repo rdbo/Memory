@@ -257,6 +257,34 @@ mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t si
 	return write(process, src, data, size);
 }
 
+mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, int_t protection)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	DWORD old_protect;
+	if (process.handle == (HANDLE)NULL || src <= (voidptr_t)NULL || size == 0 || protection <= NULL) return ret;
+	ret = (mem::int_t)VirtualProtectEx(process.handle, (LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
+mem::int_t mem::ex::protect(process_t process, voidptr_t begin, voidptr_t end, int_t protection)
+{
+	return protect(process, begin, (voidptr_t)((uintptr_t)end - (uintptr_t)begin), protection);
+}
+
+mem::voidptr_t mem::ex::allocate(process_t process, size_t size, int_t protection)
+{
+	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	if (process.handle == (HANDLE)NULL || size == 0 || protection <= NULL) return ret;
+	ret = (mem::voidptr_t)VirtualAllocEx(process.handle, NULL, size, MEM_RESERVE | MEM_COMMIT, (DWORD)protection);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
 	mask = parse_mask(mask);
@@ -282,6 +310,25 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
 	return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+}
+
+mem::int_t mem::ex::load_library(process_t process, string_t libpath)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	if (libpath.length() == 0 || process.handle == NULL) return ret;
+	size_t buffer_size = (size_t)((libpath.length() + 1) * sizeof(char_t));
+	voidptr_t buffer_ex = allocate(process, buffer_size, PAGE_READWRITE);
+	if (buffer_ex == (voidptr_t)MEM_BAD_RETURN || buffer_ex == NULL) return ret;
+	if (write(process, buffer_ex, (voidptr_t)libpath.c_str(), buffer_size) == (int_t)MEM_BAD_RETURN) return ret;
+	HANDLE hThread = CreateRemoteThread(process.handle, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, buffer_ex, 0, 0);
+	if (hThread == INVALID_HANDLE_VALUE || hThread == NULL) return ret;
+	WaitForSingleObject(hThread, -1);
+	CloseHandle(hThread);
+	VirtualFreeEx(process.handle, buffer_ex, 0, MEM_RELEASE);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
 }
 
 //mem::in
