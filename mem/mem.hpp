@@ -193,8 +193,10 @@ namespace mem
 
 #   if defined(MEM_WIN)
 	typedef uint32_t pid_t;
+	typedef uint32_t prot_t;
 #   elif defined(MEM_LINUX)
 	typedef int32_t  pid_t;
+	typedef int32_t  prot_t;
 #   endif
 
 #   if defined(MEM_86)
@@ -238,6 +240,16 @@ namespace mem
 #       endif
 	}process_t;
 
+	typedef struct
+	{
+		prot_t protection = NULL;
+#		if defined(MEM_WIN)
+		uint32_t type = MEM_RESERVE | MEM_COMMIT;
+#		elif defined(MEM_LINUX)
+		int32_t type = MAP_ANON | MAP_PRIVATE;
+#		endif
+	}alloc_t;
+
 	enum class detour_int
 	{
 		method0,
@@ -271,9 +283,9 @@ namespace mem
 			write(process, src, new type_t(value), sizeof(type_t));
 		}
 		int_t        set(process_t process, voidptr_t src, byte_t byte, size_t size);
-		int_t        protect(process_t process, voidptr_t src, size_t size, int_t protection);
-		int_t        protect(process_t process, voidptr_t begin, voidptr_t end, int_t protection);
-		voidptr_t    allocate(process_t process, size_t size, int_t protection);
+		int_t        protect(process_t process, voidptr_t src, size_t size, prot_t protection);
+		int_t        protect(process_t process, voidptr_t begin, voidptr_t end, prot_t protection);
+		voidptr_t    allocate(process_t process, size_t size, alloc_t protection);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
 		int_t        load_library(process_t process, string_t libpath);
@@ -301,9 +313,9 @@ namespace mem
 			write(src, new type_t(value), sizeof(type_t));
 		}
 		void_t       set(voidptr_t src, byte_t byte, size_t size);
-		int_t        protect(voidptr_t src, size_t size, int_t protection);
-		int_t        protect(voidptr_t begin, voidptr_t end, int_t protection);
-		voidptr_t    allocate(size_t size, int_t protection);
+		int_t        protect(voidptr_t src, size_t size, prot_t protection);
+		int_t        protect(voidptr_t begin, voidptr_t end, prot_t protection);
+		voidptr_t    allocate(size_t size, alloc_t allocation);
 		int_t        detour_length(detour_int method);
 		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
 		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);

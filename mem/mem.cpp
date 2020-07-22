@@ -257,7 +257,7 @@ mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t si
 	return write(process, src, data, size);
 }
 
-mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, int_t protection)
+mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, prot_t protection)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
@@ -269,17 +269,17 @@ mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, int_t
 	return ret;
 }
 
-mem::int_t mem::ex::protect(process_t process, voidptr_t begin, voidptr_t end, int_t protection)
+mem::int_t mem::ex::protect(process_t process, voidptr_t begin, voidptr_t end, prot_t protection)
 {
 	return protect(process, begin, (voidptr_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
-mem::voidptr_t mem::ex::allocate(process_t process, size_t size, int_t protection)
+mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocation)
 {
 	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
-	if (process.handle == (HANDLE)NULL || size == 0 || protection <= NULL) return ret;
-	ret = (mem::voidptr_t)VirtualAllocEx(process.handle, NULL, size, MEM_RESERVE | MEM_COMMIT, (DWORD)protection);
+	if (process.handle == (HANDLE)NULL || size == 0 || allocation.protection == NULL || allocation.type == NULL) return ret;
+	ret = (mem::voidptr_t)VirtualAllocEx(process.handle, NULL, size, (DWORD)allocation.type, (DWORD)allocation.protection);
 #	elif defined(MEM_LINUX)
 #	endif
 	return ret;
@@ -318,7 +318,10 @@ mem::int_t mem::ex::load_library(process_t process, string_t libpath)
 #	if defined(MEM_WIN)
 	if (libpath.length() == 0 || process.handle == NULL) return ret;
 	size_t buffer_size = (size_t)((libpath.length() + 1) * sizeof(char_t));
-	voidptr_t buffer_ex = allocate(process, buffer_size, PAGE_READWRITE);
+	alloc_t allocation;
+	allocation.type = MEM_COMMIT | MEM_RESERVE;
+	allocation.protection = PAGE_READWRITE;
+	voidptr_t buffer_ex = allocate(process, buffer_size, allocation);
 	if (buffer_ex == (voidptr_t)MEM_BAD_RETURN || buffer_ex == NULL) return ret;
 	if (write(process, buffer_ex, (voidptr_t)libpath.c_str(), buffer_size) == (int_t)MEM_BAD_RETURN) return ret;
 	HANDLE hThread = CreateRemoteThread(process.handle, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, buffer_ex, 0, 0);
@@ -410,7 +413,7 @@ mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
 	memset(src, byte, size);
 }
 
-mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
+mem::int_t mem::in::protect(voidptr_t src, size_t size, prot_t protection)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
@@ -425,18 +428,18 @@ mem::int_t mem::in::protect(voidptr_t src, size_t size, int_t protection)
 	return ret;
 }
 
-mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, int_t protection)
+mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, prot_t protection)
 {
 	return protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
-mem::voidptr_t mem::in::allocate(size_t size, int_t protection)
+mem::voidptr_t mem::in::allocate(size_t size, alloc_t allocation)
 {
 	voidptr_t addr = (voidptr_t)MEM_BAD_RETURN;
 #   if defined(MEM_WIN)
-	addr = VirtualAlloc(NULL, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, (DWORD)protection);
+	addr = VirtualAlloc(NULL, (SIZE_T)size, allocation.type, (DWORD)allocation.protection);
 #   elif defined(MEM_LINUX)
-	addr = mmap(NULL, size, protection, MAP_ANON | MAP_PRIVATE, -1, 0);
+	addr = mmap(NULL, size, allocation.protection, allocation.type, -1, 0);
 #   endif
 	return addr;
 }
@@ -459,10 +462,11 @@ mem::int_t mem::in::detour_length(detour_int method)
 mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method)
 {
 	int_t detour_size = detour_length(method);
+	prot_t protection;
 #	if defined(MEM_WIN)
-	int_t protection = PAGE_EXECUTE_READWRITE;
+	protection = PAGE_EXECUTE_READWRITE;
 #	elif defined(MEM_LINUX)
-	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #	endif
 	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
 	byte_t * stolen_bytes = new byte_t[size];
@@ -531,10 +535,16 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int 
 mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, voidptr_t gateway_out)
 {
 	int_t detour_size = detour_length(method);
+	alloc_t allocation;
+	prot_t protection;
 #	if defined(MEM_WIN)
-	int_t protection = PAGE_EXECUTE_READWRITE;
+	protection = PAGE_EXECUTE_READWRITE;
+	allocation.type = MEM_COMMIT | MEM_RESERVE;
+	allocation.protection = PAGE_EXECUTE_READWRITE;
 #	elif defined(MEM_LINUX)
-	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;;
+	allocation.protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	allocation.type = MAP_ANON | MAP_PRIVATE;
 #	endif
 
 	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
@@ -542,7 +552,7 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t si
 	byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
 	*(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
 	size_t gateway_size = size + sizeof(gateway_buffer);
-	voidptr_t gateway = allocate(gateway_size, protection);
+	voidptr_t gateway = allocate(gateway_size, allocation);
 	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 	set(gateway, 0x0, gateway_size);
 	write(gateway, (byteptr_t)src, size);
@@ -560,14 +570,15 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t si
 
 mem::void_t mem::in::detour_restore(voidptr_t src)
 {
+	prot_t protection;
 #   if defined(MEM_WIN)
-	int_t protection = PAGE_EXECUTE_READWRITE;
+	protection = PAGE_EXECUTE_READWRITE;
 #   elif defined(MEM_LINUX)
-	int_t protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #   endif
 
 	size_t size = (size_t)g_detour_restore_array[src].length();
-	protect(src, protection, size);
+	protect(src, size, protection);
 	write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
 }
 
