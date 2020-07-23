@@ -607,7 +607,7 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
-mem::int_t mem::in::load_library(process_t process, string_t libpath)
+mem::int_t mem::in::load_library(string_t libpath)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)

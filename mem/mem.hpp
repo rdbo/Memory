@@ -324,7 +324,7 @@ namespace mem
 		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
 		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
 		void_t       detour_restore(voidptr_t src);
-		int_t        load_library(process_t process, string_t libpath);
+		int_t        load_library(string_t libpath);
 	}
 }
 
