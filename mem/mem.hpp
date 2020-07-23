@@ -271,14 +271,16 @@ namespace mem
 		moduleinfo_t get_module_info(process_t process, string_t module_name);
 		bool_t       is_process_running(process_t process);
 		int_t        read(process_t process, voidptr_t src, voidptr_t dst, size_t size);
-		template <typename type_t> type_t read(process_t process, voidptr_t src)
+		template <typename type_t>
+		type_t       read(process_t process, voidptr_t src)
 		{
 			type_t holder;
 			read(process, src, &holder, sizeof(holder));
 			return holder;
 		}
 		int_t        write(process_t process, voidptr_t src, voidptr_t data, size_t size);
-		template <typename type_t> void_t write(process_t process, voidptr_t src, type_t value)
+		template <typename type_t>
+		void_t       write(process_t process, voidptr_t src, type_t value)
 		{
 			write(process, src, new type_t(value), sizeof(type_t));
 		}
@@ -301,14 +303,16 @@ namespace mem
 		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
 		void_t       read(voidptr_t src, voidptr_t dst, size_t size);
-		template <typename type_t> type_t read(voidptr_t src)
+		template <typename type_t>
+		type_t       read(voidptr_t src)
 		{
 			type_t holder;
 			read(src, &holder, sizeof(holder));
 			return holder;
 		}
 		void_t       write(voidptr_t src, voidptr_t data, size_t size);
-		template <typename type_t> void_t write(voidptr_t src, type_t value)
+		template <typename type_t>
+		void_t       write(voidptr_t src, type_t value)
 		{
 			write(src, new type_t(value), sizeof(type_t));
 		}
@@ -320,6 +324,7 @@ namespace mem
 		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
 		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
 		void_t       detour_restore(voidptr_t src);
+		int_t        load_library(process_t process, string_t libpath);
 	}
 }
 

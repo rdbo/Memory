@@ -271,7 +271,7 @@ mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, prot_
 
 mem::int_t mem::ex::protect(process_t process, voidptr_t begin, voidptr_t end, prot_t protection)
 {
-	return protect(process, begin, (voidptr_t)((uintptr_t)end - (uintptr_t)begin), protection);
+	return protect(process, begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
 }
 
 mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocation)
@@ -605,6 +605,16 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
 {
 	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+}
+
+mem::int_t mem::in::load_library(process_t process, string_t libpath)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	ret = (LoadLibrary(libpath.c_str()) == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
 }
 
 #endif //MEM_COMPATIBLE
