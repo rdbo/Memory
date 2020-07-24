@@ -1,91 +1,49 @@
 # Memory
-Memory Management on Windows/Linux
-# How to use it?
+Memory Management on Windows/Linux  
+https://github.com/rdbo/Memory  
+
+# Usage
+Just copy the "mem" folder to your project, then include "mem/mem.hpp" and make sure to compile "mem/mem.cpp".  
+Check "docs/documentation.txt" for more guidance  
+
+#LICENSE
+Read LICENSE  
+
+#Overview
 ```
-To compile on Linux, just run "compile.sh" on a terminal.
-Check out the examples folder for assistance
-You can use mem.h with either mem.cpp or mem.lib (Windows) / mem.a (Linux) to compile your projects
+mem::ex::get_pid
+mem::ex::get_process
+mem::ex::get_process_name
+mem::ex::get_module_info
+mem::ex::is_process_running
+mem::ex::read
+mem::ex::write
+mem::ex::set
+mem::ex::protect
+mem::ex::allocate
+mem::ex::pattern_scan
+mem::ex::load_library
+
+mem::in::get_pid
+mem::in::get_process
+mem::in::get_process_name
+mem::in::get_module_info
+mem::in::read
+mem::in::write
+mem::in::set
+mem::in::protect
+mem::in::allocate
+mem::in::detour
+mem::in::detour_length
+mem::in::detour_trampoline
+mem::in::detour_restore
+mem::in::pattern_scan
+mem::in::load_library
 ```
-# Overview
-## WINDOWS ##
+
+#TODO
 ```
-Memory::EnumWindowsCallback
-Memory::ParseMask
-
-Memory::Ex::GetProcessIdByName
-Memory::Ex::GetProcessIdByWindow
-Memory::Ex::GetProcessIdByHandle
-Memory::Ex::GetWindowHandle
-Memory::Ex::GetModuleAddress
-Memory::Ex::GetModuleList
-Memory::Ex::IsModuleLoaded
-Memory::Ex::GetPointer
-Memory::Ex::WriteBuffer
-Memory::Ex::ReadBuffer
-Memory::Ex::GetModuleInfo
-Memory::Ex::PatternScan
-Memory::Ex::PatternScanModule
-
-Memory::Ex::Nt::GetProcessHandle
-Memory::Ex::Nt::GetProcessID
-Memory::Ex::Nt::OpenProcessHandle
-Memory::Ex::Nt::CloseProcessHandle
-Memory::Ex::Nt::WriteBuffer
-Memory::Ex::Nt::ReadBuffer
-
-Memory::Ex::Zw::GetProcessHandle
-Memory::Ex::Zw::GetProcessID
-Memory::Ex::Zw::OpenProcessHandle
-Memory::Ex::Zw::CloseProcessHandle
-Memory::Ex::Zw::WriteBuffer
-Memory::Ex::Zw::ReadBuffer
-
-Memory::Ex::DLL::LoadLib
-
-Memory::In::ZeroMem
-Memory::In::IsBadPointer
-Memory::In::GetCurrentProcessID
-Memory::In::GetCurrentProcessHandle
-Memory::In::GetCurrentWindowHandle
-Memory::In::GetModuleAddress
-Memory::In::GetPointer
-Memory::In::WriteBuffer
-Memory::In::ReadBuffer
-Memory::In::GetModuleInfo
-Memory::In::PatternScan
-Memory::In::PatternScanModule
-Memory::In::Read
-Memory::In::Write
-
-Memory::In::Hook::Restore
-Memory::In::Hook::Detour
-Memory::In::Hook::TrampolineHook
-```
-## LINUX ##
-```
-Memory::ParseMask
-
-Memory::Ex::GetProcessIdByName
-Memory::Ex::GetModuleAddress
-Memory::Ex::ReadBuffer
-Memory::Ex::WriteBuffer
-Memory::Ex::VM::ReadBuffer
-Memory::Ex::VM::WriteBuffer
-Memory::Ex::Ptrace::ReadBuffer
-Memory::Ex::Ptrace::WriteBuffer
-Memory::Ex::PatternScan
-Memory::Ex::IsProcessRunning
-
-Memory::In::ZeroMem
-Memory::In::IsBadPointer
-Memory::In::GetCurrentProcessID
-Memory::In::ReadBuffer
-Memory::In::WriteBuffer
-Memory::In::PatternScan
-Memory::In::Read
-Memory::In::Write
-
-Memory::In::Hook::Restore
-Memory::In::Hook::Detour
-Memory::In::Hook::TrampolineHook
+Add memory scanning
+Add support for allocating and protecting memory externally on Linux
+Add support for loading libraries externally on Linux
 ```

@@ -1,42 +1,49 @@
-#include "mem.h"
+//Made by rdbo
+//https://github.com/rdbo/Memory
 
-//Windows
-#if defined(WIN) && !defined(LINUX)
-//Variables
-HWND Memory::g_hWnd;
-//Helper Functions
-BOOL CALLBACK Memory::EnumWindowsCallback(HWND hWnd, LPARAM lParam)
+#include "mem.hpp"
+#if defined(MEM_COMPATIBLE)
+
+const mem::byte_t MEM_JMP[] = ASM_GENERATE(_MEM_JMP);
+const mem::byte_t MEM_JMP_RAX[] = ASM_GENERATE(_MEM_JMP_RAX);
+const mem::byte_t MEM_JMP_EAX[] = ASM_GENERATE(_MEM_JMP_EAX);
+const mem::byte_t MEM_CALL[] = ASM_GENERATE(_MEM_CALL);
+const mem::byte_t MEM_CALL_EAX[] = ASM_GENERATE(_MEM_CALL_EAX);
+const mem::byte_t MEM_CALL_RAX[] = ASM_GENERATE(_MEM_CALL_RAX);
+const mem::byte_t MEM_MOVABS_RAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
+const mem::byte_t MEM_MOV_EAX[] = ASM_GENERATE(_MEM_MOV_EAX);
+const mem::byte_t MEM_PUSH[] = ASM_GENERATE(_MEM_PUSH);
+const mem::byte_t MEM_PUSH_RAX[] = ASM_GENERATE(_MEM_PUSH_RAX);
+const mem::byte_t MEM_PUSH_EAX[] = ASM_GENERATE(_MEM_PUSH_EAX);
+const mem::byte_t MEM_RET[] = ASM_GENERATE(_MEM_RET);
+const mem::byte_t MEM_BYTE[] = ASM_GENERATE(_MEM_BYTE);
+const mem::byte_t MEM_WORD[] = ASM_GENERATE(_MEM_WORD);
+const mem::byte_t MEM_DWORD[] = ASM_GENERATE(_MEM_DWORD);
+const mem::byte_t MEM_QWORD[] = ASM_GENERATE(_MEM_QWORD);
+#if defined(MEM_86)
+const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOV_EAX);
+#elif defined(MEM_64)
+const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
+#endif
+
+std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
+
+//mem
+
+mem::string_t mem::parse_mask(string_t mask)
 {
-	pid_t wndPid;
-	GetWindowThreadProcessId(hWnd, &wndPid);
-	if (wndPid != (pid_t)lParam) return TRUE;
-
-	g_hWnd = hWnd;
-	return FALSE;
-}
-
-cstr_t Memory::ParseMask(cstr_t mask)
-{
-	size_t length = strlen(mask);
-	for (size_t i = 0; i < length; i++)
-	{
-		if (mask[i] != KNOWN_BYTE)
-		{
-			if (mask[i] == KNOWN_BYTE_UPPER)
-				mask[i] = KNOWN_BYTE;
-			else
-				mask[i] = UNKNOWN_BYTE;
-		}
-	}
+	for (size_t i = 0; i < mask.length(); i++)
+		mask[i] = mask.at(i) == MEM_KNOWN_BYTE || mask.at(i) == (char)toupper(MEM_KNOWN_BYTE) ? MEM_KNOWN_BYTE : MEM_UNKNOWN_BYTE;
 
 	return mask;
 }
 
-//Memory::Ex
-#if INCLUDE_EXTERNALS
-pid_t Memory::Ex::GetProcessIdByName(str_t processName)
+//mem::ex
+
+mem::pid_t mem::ex::get_pid(string_t process_name)
 {
-	pid_t pid = 0;
+	pid_t pid = (pid_t)MEM_BAD_RETURN;
+#   if defined(MEM_WIN)
 	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if (hSnap != INVALID_HANDLE_VALUE)
 	{
@@ -47,7 +54,7 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 		{
 			do
 			{
-				if (!_tcscmp(procEntry.szExeFile, processName.c_str()))
+				if (!lstrcmp(procEntry.szExeFile, process_name.c_str()))
 				{
 					pid = procEntry.th32ProcessID;
 					break;
@@ -57,967 +64,557 @@ pid_t Memory::Ex::GetProcessIdByName(str_t processName)
 		}
 	}
 	CloseHandle(hSnap);
-	return pid;
-}
-//--------------------------------------------
-pid_t Memory::Ex::GetProcessIdByWindow(str_t windowName)
-{
-	pid_t pid;
-	GetWindowThreadProcessId(FindWindow(NULL, windowName.c_str()), &pid);
-	return pid;
-}
-//--------------------------------------------
-pid_t Memory::Ex::GetProcessIdByWindow(str_t windowClass, str_t windowName)
-{
-	pid_t pid;
-	GetWindowThreadProcessId(FindWindow(windowClass.c_str(), windowName.c_str()), &pid);
-	return pid;
-}
-//--------------------------------------------
-pid_t Memory::Ex::GetProcessIdByWindow(HWND hWnd)
-{
-	pid_t pid = 0;
-	GetWindowThreadProcessId(hWnd, &pid);
-	return pid;
-}
-//--------------------------------------------
-pid_t Memory::Ex::GetProcessIdByHandle(HANDLE hProcess)
-{
-	return GetProcessId(hProcess);
-}
-//--------------------------------------------
-HANDLE Memory::Ex::GetProcessHandle(pid_t pid, DWORD dwAccess)
-{
-	return OpenProcess(dwAccess, NULL, pid);
-}
-//--------------------------------------------
-HWND Memory::Ex::GetWindowHandle(pid_t pid)
-{
-	g_hWnd = NULL;
-	EnumWindows(EnumWindowsCallback, pid);
-	return g_hWnd;
-}
-//--------------------------------------------
-mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
-{
-	mem_t moduleAddr = NULL;
-	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid);
-	if (hSnap != INVALID_HANDLE_VALUE)
-	{
-		MODULEENTRY32 modEntry;
-		modEntry.dwSize = sizeof(modEntry);
-		if (Module32First(hSnap, &modEntry))
-		{
-			do
-			{
-				if (!_tcscmp(modEntry.szModule, moduleName.c_str()))
-				{
-					moduleAddr = (mem_t)modEntry.modBaseAddr;
-					break;
-				}
-			} while (Module32Next(hSnap, &modEntry));
-		}
-	}
-	CloseHandle(hSnap);
-	return moduleAddr;
-}
-//--------------------------------------------
-vstr_t Memory::Ex::GetModuleList(pid_t pid)
-{
-	vstr_t modList;
-	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid);
-	MODULEENTRY32 entry;
-	entry.dwSize = sizeof(MODULEENTRY32);
-	if (Module32First(hSnap, &entry))
-	{
-		do
-		{
-			modList.push_back(entry.szModule);
-		} while (Module32Next(hSnap, &entry));
-	}
-
-	return modList;
-}
-//--------------------------------------------
-bool Memory::Ex::IsModuleLoaded(str_t moduleName, vstr_t moduleList)
-{
-	for (size_t i = 0; i < moduleList.size(); i++)
-	{
-		if (!_tcscmp(moduleName.c_str(), moduleList.at(i).c_str()))
-			return true;
-	}
-
-	return false;
-}
-//--------------------------------------------
-mem_t Memory::Ex::GetPointer(HANDLE hProc, mem_t baseAddress, std::vector<mem_t> offsets)
-{
-	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
-	mem_t addr = baseAddress;
-	for (size_t i = 0; i < offsets.size(); ++i)
-	{
-		addr += offsets[i];
-		ReadProcessMemory(hProc, (BYTE*)addr, &addr, sizeof(addr), 0);
-	}
-	return addr;
-}
-//--------------------------------------------
-BOOL Memory::Ex::WriteBuffer(HANDLE hProc, mem_t address, const ptr_t value, SIZE_T size)
-{
-	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
-	return WriteProcessMemory(hProc, (BYTE*)address, value, size, nullptr);
-}
-//--------------------------------------------
-BOOL Memory::Ex::ReadBuffer(HANDLE hProc, mem_t address, ptr_t buffer, SIZE_T size)
-{
-	if (hProc == INVALID_HANDLE_VALUE || hProc == 0) return BAD_RETURN;
-	return ReadProcessMemory(hProc, (BYTE*)address, buffer, size, nullptr);
-}
-//--------------------------------------------
-MODULEINFO Memory::Ex::GetModuleInfo(HANDLE hProcess, str_t moduleName)
-{
-	HMODULE hMod;
-	GetModuleHandleEx(NULL, moduleName.c_str(), &hMod);
-
-	MODULEINFO modInfo = { 0 };
-	GetModuleInformation(hProcess, hMod, &modInfo, sizeof(modInfo));
-
-	return modInfo;
-}
-//--------------------------------------------
-mem_t Memory::Ex::PatternScan(HANDLE hProcess, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
-{
-	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
-	mask = ParseMask(mask);
-	mem_t patternLength = strlen(mask);
-	size_t scanSize = (size_t)endAddr - beginAddr;
-	for (size_t i = 0; i < scanSize; i++)
-	{
-		bool found = true;
-		for (size_t j = 0; j < patternLength; j++)
-		{
-			byte_t curByte;
-			ReadBuffer(hProcess, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte));
-			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == curByte;
-		}
-
-		if (found) return beginAddr + i;
-	}
-
-	return 0;
-}
-//--------------------------------------------
-mem_t Memory::Ex::PatternScanModule(HANDLE hProcess, str_t moduleName, byte_t* pattern, cstr_t mask)
-{
-	if (!hProcess || hProcess == INVALID_HANDLE_VALUE) return 0;
-	MODULEINFO modInfo = GetModuleInfo(hProcess, moduleName);
-	mem_t patternLength = strlen(mask);
-	mem_t baseAddr = (mem_t)modInfo.lpBaseOfDll;
-	size_t scanSize = (size_t)modInfo.SizeOfImage;
-
-	return PatternScan(hProcess, baseAddr, baseAddr + scanSize, pattern, mask);
-}
-
-//Memory::Ex::Nt
-HANDLE Memory::Ex::Nt::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return INVALID_HANDLE_VALUE;
-	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(GETNEXTPROCESS_STR));
-	if (!NtGetNextProcess) return INVALID_HANDLE_VALUE;
-
-	HANDLE hProcess = 0;
-	TCHAR buffer[MAX_PATH];
-	while (NtGetNextProcess(hProcess, dwAccess, 0, 0, &hProcess) == 0)
-	{
-		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
-		str_t str = buffer;
-		if (str.find(processName) != str.npos) break;
-	}
-
-	CloseHandle(ntdll);
-	return hProcess;
-}
-//--------------------------------------------
-pid_t Memory::Ex::Nt::GetProcessID(str_t processName)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return 0;
-	NtGetNextProcess_t NtGetNextProcess = (NtGetNextProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(GETNEXTPROCESS_STR));
-	if (!NtGetNextProcess) return 0;
-
-	HANDLE hProcess = 0;
-	pid_t processId = 0;
-	TCHAR buffer[MAX_PATH];
-	while (NtGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
-	{
-		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
-		str_t str = buffer;
-		if (str.find(processName) != str.npos)
-		{
-			processId = GetProcessId(hProcess);
-			break;
-		}
-	}
-	CloseHandle(ntdll);
-	return processId;
-}
-//--------------------------------------------
-HANDLE Memory::Ex::Nt::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return INVALID_HANDLE_VALUE;
-	NtOpenProcess_t NtOpenProcess = (NtOpenProcess_t)GetProcAddress(ntdll, NT_FUNCTION_STR(OPENPROCESS_STR));
-	if (!NtOpenProcess) return INVALID_HANDLE_VALUE;
-
-	HANDLE hProcess = 0;
-	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
-	CLIENT_ID clId = {};
-	clId.UniqueProcess = (HANDLE)pid;
-	NtOpenProcess(&hProcess, dwAccess, &objAttr, &clId);
-	CloseHandle(ntdll);
-	return hProcess;
-}
-//--------------------------------------------
-bool Memory::Ex::Nt::CloseProcessHandle(HANDLE hProcess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return false;
-	NtClose_t NtClose = (NtClose_t)GetProcAddress(ntdll, NT_FUNCTION_STR(CLOSE_STR));
-	if (!NtClose) return false;
-
-	NtClose(hProcess);
-	CloseHandle(ntdll);
-	return true;
-}
-//--------------------------------------------
-void Memory::Ex::Nt::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return;
-	NtWriteVirtualMemory_t NtWriteVirtualMemory = (NtWriteVirtualMemory_t)GetProcAddress(ntdll, NT_FUNCTION_STR(WRITEVIRTUALMEMORY_STR));
-	if (!NtWriteVirtualMemory) return;
-
-	NtWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
-	CloseHandle(ntdll);
-}
-//--------------------------------------------
-void Memory::Ex::Nt::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return;
-	NtReadVirtualMemory_t NtReadVirtualMemory = (NtReadVirtualMemory_t)GetProcAddress(ntdll, NT_FUNCTION_STR(READVIRTUALMEMORY_STR));
-	if (!NtReadVirtualMemory) return;
-
-	NtReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
-	CloseHandle(ntdll);
-}
-
-//Memory::Ex::Zw
-HANDLE Memory::Ex::Zw::GetProcessHandle(str_t processName, ACCESS_MASK dwAccess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return INVALID_HANDLE_VALUE;
-	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(GETNEXTPROCESS_STR));
-	if (!ZwGetNextProcess) return INVALID_HANDLE_VALUE;
-
-	HANDLE hProcess = 0;
-	TCHAR buffer[MAX_PATH];
-	while (ZwGetNextProcess(hProcess, dwAccess, 0, 0, &hProcess) == 0)
-	{
-		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
-		str_t str = buffer;
-		if (str.find(processName) != str.npos) break;
-	}
-
-	CloseHandle(ntdll);
-	return hProcess;
-}
-//--------------------------------------------
-pid_t Memory::Ex::Zw::GetProcessID(str_t processName)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return 0;
-	ZwGetNextProcess_t ZwGetNextProcess = (ZwGetNextProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(GETNEXTPROCESS_STR));
-	if (!ZwGetNextProcess) return 0;
-
-	HANDLE hProcess = 0;
-	pid_t processId = 0;
-	TCHAR buffer[MAX_PATH];
-	while (ZwGetNextProcess(hProcess, MAXIMUM_ALLOWED, 0, 0, &hProcess) == 0)
-	{
-		GetModuleFileNameEx(hProcess, 0, buffer, sizeof(buffer) / sizeof(TCHAR));
-		str_t str = buffer;
-		if (str.find(processName) != str.npos)
-		{
-			processId = GetProcessId(hProcess);
-			break;
-		}
-	}
-	CloseHandle(ntdll);
-	return processId;
-}
-//--------------------------------------------
-HANDLE Memory::Ex::Zw::OpenProcessHandle(pid_t pid, ACCESS_MASK dwAccess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return INVALID_HANDLE_VALUE;
-	ZwOpenProcess_t ZwOpenProcess = (ZwOpenProcess_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(OPENPROCESS_STR));
-	if (!ZwOpenProcess) return INVALID_HANDLE_VALUE;
-
-	HANDLE hProcess = 0;
-	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
-	CLIENT_ID clId = {};
-	clId.UniqueProcess = (HANDLE)pid;
-	ZwOpenProcess(&hProcess, dwAccess, &objAttr, &clId);
-	CloseHandle(ntdll);
-	return hProcess;
-}
-//--------------------------------------------
-bool Memory::Ex::Zw::CloseProcessHandle(HANDLE hProcess)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return false;
-	ZwClose_t ZwClose = (ZwClose_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(CLOSE_STR));
-	if (!ZwClose) return false;
-
-	ZwClose(hProcess);
-	CloseHandle(ntdll);
-	return true;
-}
-//--------------------------------------------
-void Memory::Ex::Zw::WriteBuffer(HANDLE hProcess, mem_t address, const ptr_t buffer, size_t size)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return;
-	ZwWriteVirtualMemory_t ZwWriteVirtualMemory = (ZwWriteVirtualMemory_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(WRITEVIRTUALMEMORY_STR));
-	if (!ZwWriteVirtualMemory) return;
-
-	ZwWriteVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
-	CloseHandle(ntdll);
-}
-//--------------------------------------------
-void Memory::Ex::Zw::ReadBuffer(HANDLE hProcess, mem_t address, ptr_t buffer, size_t size)
-{
-	HMODULE ntdll = GetModuleHandle(NTDLL_NAME);
-	if (!ntdll) return;
-	ZwReadVirtualMemory_t ZwReadVirtualMemory = (ZwReadVirtualMemory_t)GetProcAddress(ntdll, ZW_FUNCTION_STR(READVIRTUALMEMORY_STR));
-	if (!ZwReadVirtualMemory) return;
-
-	ZwReadVirtualMemory(hProcess, (PVOID)address, buffer, size, NULL);
-	CloseHandle(ntdll);
-}
-
-//Memory::Ex::DLL
-
-bool Memory::Ex::DLL::LoadLib(HANDLE hProc, str_t dllPath)
-{
-	if (dllPath.length() == 0 || hProc == INVALID_HANDLE_VALUE || hProc == 0) return false;
-
-	ptr_t loc = VirtualAllocEx(hProc, 0, (dllPath.length() + 1) * sizeof(TCHAR), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	if (loc == 0) return false;
-
-	if (!WriteProcessMemory(hProc, loc, dllPath.c_str(), (dllPath.length() + 1) * sizeof(TCHAR), 0)) return false;
-	HANDLE hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, loc, 0, 0);
-	if (hThread == INVALID_HANDLE_VALUE || hThread == 0) return false;
-	WaitForSingleObject(hThread, -1);
-	CloseHandle(hThread);
-	VirtualFreeEx(hProc, loc, 0, MEM_RELEASE);
-
-	return true;
-}
-
-
-#endif //INCLUDE_EXTERNALS
-//Memory::In
-#if INCLUDE_INTERNALS
-void Memory::In::ZeroMem(ptr_t src, size_t size)
-{
-	memset(src, 0x0, size);
-}
-//--------------------------------------------
-bool Memory::In::IsBadPointer(ptr_t pointer)
-{
-	MEMORY_BASIC_INFORMATION mbi = { 0 };
-	if (VirtualQuery(pointer, &mbi, sizeof(mbi)))
-	{
-		DWORD mask = (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY);
-		bool b = !(mbi.Protect & mask);
-		if (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) b = true;
-
-		return b;
-	}
-	return true;
-}
-//--------------------------------------------
-pid_t Memory::In::GetCurrentProcessID()
-{
-	return GetCurrentProcessId();
-}
-//--------------------------------------------
-HANDLE Memory::In::GetCurrentProcessHandle()
-{
-	return GetCurrentProcess();
-}
-//--------------------------------------------
-HWND Memory::In::GetCurrentWindowHandle()
-{
-	g_hWnd = NULL;
-	EnumWindows(EnumWindowsCallback, GetCurrentProcessID());
-	return g_hWnd;
-}
-//--------------------------------------------
-mem_t Memory::In::GetModuleAddress(str_t moduleName)
-{
-	return (mem_t)GetModuleHandle(moduleName.c_str());
-}
-//--------------------------------------------
-mem_t Memory::In::GetPointer(mem_t baseAddress, std::vector<mem_t> offsets)
-{
-	mem_t addr = baseAddress;
-	for (size_t i = 0; i < offsets.size(); ++i)
-	{
-		addr += offsets[i];
-		addr = *(mem_t*)addr;
-	}
-	return addr;
-}
-//--------------------------------------------
-bool Memory::In::WriteBuffer(mem_t address, const ptr_t value, SIZE_T size)
-{
-	DWORD oProtection;
-	if (VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oProtection))
-	{
-		memcpy((ptr_t)(address), value, size);
-		VirtualProtect((LPVOID)address, size, oProtection, NULL);
-		return true;
-	}
-
-	return false;
-}
-//--------------------------------------------
-bool Memory::In::ReadBuffer(mem_t address, ptr_t buffer, SIZE_T size)
-{
-	WriteBuffer((mem_t)buffer, (ptr_t)address, size);
-	return true;
-}
-//--------------------------------------------
-MODULEINFO Memory::In::GetModuleInfo(str_t moduleName)
-{
-	MODULEINFO modInfo = { 0 };
-	HMODULE hMod = GetModuleHandle(moduleName.c_str());
-	if (!hMod) return modInfo;
-	GetModuleInformation(GetCurrentProcess(), hMod, &modInfo, sizeof(modInfo));
-	return modInfo;
-}
-//--------------------------------------------
-mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
-{
-	mask = ParseMask(mask);
-	size_t patternLength = strlen(mask);
-	size_t scanSize = endAddr - baseAddr;
-	for (size_t i = 0; i < scanSize; i++)
-	{
-		bool found = true;
-		for (size_t j = 0; j < patternLength; j++)
-		{
-			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
-		}
-
-		if (found) return baseAddr + i;
-	}
-
-	return 0;
-}
-//--------------------------------------------
-mem_t Memory::In::PatternScanModule(str_t moduleName, byte_t* pattern, cstr_t mask)
-{
-	MODULEINFO modInfo = GetModuleInfo(moduleName);
-	size_t patternLength = strlen(mask);
-	mem_t baseAddr = (mem_t)modInfo.lpBaseOfDll;
-	size_t scanSize = (size_t)modInfo.SizeOfImage;
-	return PatternScan(baseAddr, baseAddr + scanSize, pattern, mask);
-}
-
-//Memory::In::Hook
-
-std::map<mem_t, std::vector<byte_t>> Memory::In::Hook::restore_arr;
-bool Memory::In::Hook::Restore(mem_t address)
-{
-	if (restore_arr.count(address) <= 0) return false;
-	std::vector<byte_t> obytes = restore_arr.at(address);
-	WriteBuffer(address, obytes.data(), obytes.size());
-	return true;
-}
-//--------------------------------------------
-bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size)
-{
-	if (size < JUMP_LENGTH) return false;
-
-	//Save stolen bytes
-	byte_t* bytes = new byte_t[size];
-	ZeroMem(bytes, size);
-	memcpy(bytes, src, size);
-	std::vector<byte_t> vbytes;
-	vbytes.reserve(size);
-	for (size_t i = 0; i < size; i++)
-	{
-		vbytes.insert(vbytes.begin() + i, bytes[i]);
-	}
-	restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
-
-	//Detour
-	DWORD  oProtect;
-	VirtualProtect(src, size, PAGE_EXECUTE_READWRITE, &oProtect);
-#	if defined(ARCH_X86)
-	byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-	mem_t  jmpAddr = (mem_t)((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
-	*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
-	memcpy(src, CodeCave, sizeof(CodeCave));
-
-#	elif defined(ARCH_X64)
-	byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-	mem_t jmpAddr = (mem_t)dst;
-	*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
-	memcpy(src, CodeCave, sizeof(CodeCave));
-#	endif
-	VirtualProtect(src, size, oProtect, &oProtect);
-	return true;
-}
-//--------------------------------------------
-byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size)
-{
-	if (size < JUMP_LENGTH) return 0;
-	ptr_t gateway = VirtualAlloc(0, size + JUMP_LENGTH, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	memcpy(gateway, src, size);
-#	if defined(ARCH_X86)
-	byte_t GatewayCodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-	mem_t jmpBack = ((mem_t)src - (mem_t)gateway) - JUMP_LENGTH;
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP_OP)) = jmpBack;
-	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
-#	elif defined(ARCH_X64)
-	mem_t jmpBack = (mem_t)src + size;
-	byte_t GatewayCodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOVABS_RAX_OP)) = jmpBack;
-	memcpy((ptr_t)((mem_t)gateway + size), GatewayCodeCave, sizeof(GatewayCodeCave));
-#	endif
-	Detour(src, dst, size);
-	return (byte_t*)gateway;
-}
-#endif //INCLUDE_INTERNALS
-#endif //Windows
-//============================================
-//============================================
-//============================================
-
-//Linux
-#if defined(LINUX) && !defined(WIN)
-
-//Memory
-//Helper functions
-cstr_t Memory::ParseMask(cstr_t mask)
-{
-	size_t length = strlen(mask);
-	for (size_t i = 0; i < length; i++)
-	{
-		if (mask[i] != KNOWN_BYTE)
-		{
-			if (mask[i] == KNOWN_BYTE_UPPER)
-				mask[i] = KNOWN_BYTE;
-			else
-				mask[i] = UNKNOWN_BYTE;
-		}
-	}
-
-	return mask;
-}
-
-//Memory::Ex
-#if INCLUDE_EXTERNALS
-pid_t Memory::Ex::GetProcessIdByName(str_t processName)
-{
-	pid_t pid = INVALID_PID;
+#   elif defined(MEM_LINUX)
 	DIR* pdir = opendir("/proc");
 	if (!pdir)
-		return INVALID_PID;
+		return pid;
 
 	struct dirent* pdirent;
 	while (pid < 0 && (pdirent = readdir(pdir)))
 	{
-		int id = atoi(pdirent->d_name);
+		pid_t id = atoi(pdirent->d_name);
 		if (id > 0)
 		{
-			str_t cmdpath = str_t("/proc/") + pdirent->d_name + "/cmdline";
-			std::ifstream cmdfile(cmdpath.c_str());
-			str_t cmdline;
-			getline(cmdfile, cmdline);
-			size_t pos = cmdline.find('\0');
-			if (!cmdline.empty())
-			{
-				if (pos != str_t::npos)
-					cmdline = cmdline.substr(0, pos);
-				pos = cmdline.rfind('/');
-				if (pos != str_t::npos)
-					cmdline = cmdline.substr(pos + 1);
-				if (processName == cmdline.c_str())
-					pid = id;
-			}
+			std::string proc_name = get_process_name(id);
+			if (!strcmp(proc_name.c_str(), process_name.c_str()))
+				pid = id;
 		}
 	}
 	closedir(pdir);
+#   endif
 	return pid;
 }
-//--------------------------------------------
-mem_t Memory::Ex::GetModuleAddress(pid_t pid, str_t moduleName)
+
+mem::process_t mem::ex::get_process(string_t process_name)
 {
-	char path_buffer[DEFAULT_BUFFER_SIZE];
-	char baseAddress[MAX_BUFFER_SIZE];
-	snprintf(path_buffer, sizeof(path_buffer), PROC_MAPS_STR, pid);
-	int proc_maps = open(path_buffer, O_RDONLY);
-	size_t size = lseek(proc_maps, 0, SEEK_END);
-	char* file_buffer = new char[size + 1];
-	if (size == 0 || !proc_maps || !file_buffer) return BAD_RETURN;
-	memset(file_buffer, 0x0, size + 1);
-	for (size_t i = 0; read(proc_maps, file_buffer + i, 1) > 0; i++);
-
-	char* ptr = NULL;
-	if (moduleName.c_str() != NULL && (ptr = strstr(file_buffer, moduleName.c_str())) == NULL)
-		if ((ptr = strstr(file_buffer, moduleName.c_str())) == NULL) return BAD_RETURN;
-		else if ((ptr = strstr(file_buffer, "r-xp")) == NULL) return BAD_RETURN;
-
-	while (*ptr != '\n' && ptr >= file_buffer)
-	{
-		ptr--;
-	}
-	ptr++;
-
-	for (int i = 0; *ptr != '-'; i++)
-	{
-		baseAddress[i] = *ptr;
-		ptr++;
-	}
-
-	mem_t base = (mem_t)strtol(baseAddress, NULL, 16);
-	close(proc_maps);
-	free(file_buffer);
-
-	return base;
-}
-//--------------------------------------------
-bool Memory::Ex::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size, API method)
-{
-	switch(method)
-	{
-		case API::Default:
-		{
-			if (size == 0 || buffer == 0 || pid == INVALID_PID) return false;
-			char path_buffer[DEFAULT_BUFFER_SIZE];
-			snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
-
-			int proc_mem = open(path_buffer, O_RDONLY);
-			lseek(proc_mem, address, SEEK_SET);
-			read(proc_mem, buffer, size);
-			return true;
-		}
-		break;
-
-		case API::VM:
-		{
-			VM::ReadBuffer(pid, address, buffer, size);
-		}
-		break;
-
-		case API::Ptrace:
-		{
-			Ptrace::ReadBuffer(pid, address, buffer, size);
-		}
-		break;
-
-		default:
-		break;
-	}
-	return false;
-}
-//--------------------------------------------
-bool Memory::Ex::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size, API method)
-{
-	switch(method)
-	{
-		case API::Default:
-		{
-			if (size == 0 || value == 0 || pid == INVALID_PID) return false;
-
-			char path_buffer[DEFAULT_BUFFER_SIZE];
-			snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
-
-			int proc_mem = open(path_buffer, O_WRONLY);
-			lseek(proc_mem, address, SEEK_SET);
-			write(proc_mem, value, size);
-			return true;
-		}
-		break;
-
-		case API::VM:
-		{
-			return (bool)VM::WriteBuffer(pid, address, value, size);
-		}
-		break;
-
-		case API::Ptrace:
-		{
-			Ptrace::WriteBuffer(pid, address, value, size);
-			return true;
-		}
-		break;
-
-		default:
-		break;
-	}
-	return false;
-}
-//--------------------------------------------
-int Memory::Ex::VM::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
-{
-	struct iovec src;
-	struct iovec dst;
-	dst.iov_base = buffer;
-	dst.iov_len = size;
-	src.iov_base = (ptr_t)address;
-	src.iov_len = size;
-	return process_vm_readv(pid, &dst, 1, &src, 1, 0);
-}
-//--------------------------------------------
-int Memory::Ex::VM::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
-{
-	struct iovec src;
-	struct iovec dst;
-	src.iov_base = value;
-	src.iov_len = size;
-	dst.iov_base = (ptr_t)address;
-	dst.iov_len = size;
-	return process_vm_writev(pid, &src, 1, &dst, 1, 0);
-}
-//--------------------------------------------
-void Memory::Ex::Ptrace::ReadBuffer(pid_t pid, mem_t address, ptr_t buffer, size_t size)
-{
-	char path_buffer[DEFAULT_BUFFER_SIZE];
-	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
-	int proc_mem = open(path_buffer, O_RDWR);
-	ptrace(PTRACE_ATTACH, pid, 0, 0);
-	waitpid(pid, NULL, 0);
-	pread(proc_mem, buffer, size, address);
-	ptrace(PTRACE_DETACH, pid, 0, 0);
-	close(proc_mem);
-}
-//--------------------------------------------
-void Memory::Ex::Ptrace::WriteBuffer(pid_t pid, mem_t address, ptr_t value, size_t size)
-{
-	char path_buffer[DEFAULT_BUFFER_SIZE];
-	snprintf(path_buffer, sizeof(path_buffer), PROC_MEM_STR, pid);
-	int proc_mem = open(path_buffer, O_RDWR);
-	ptrace(PTRACE_ATTACH, pid, 0, 0);
-	waitpid(pid, NULL, 0);
-	pwrite(proc_mem, value, size, address);
-	ptrace(PTRACE_DETACH, pid, 0, 0);
-	close(proc_mem);
-}
-//--------------------------------------------
-mem_t Memory::Ex::PatternScan(pid_t pid, mem_t beginAddr, mem_t endAddr, byte_t* pattern, cstr_t mask, API method)
-{
-	mask = ParseMask(mask);
-	size_t patternLength = strlen(mask);
-	size_t scanSize = (size_t)endAddr - beginAddr;
-	for (size_t i = 0; i < scanSize; i++)
-	{
-		bool found = true;
-		for (size_t j = 0; j < patternLength; j++)
-		{
-			byte_t curByte;
-			ReadBuffer(pid, (mem_t)(beginAddr + i + j), &curByte, sizeof(curByte), method);
-			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == curByte;
-		}
-
-		if (found) return beginAddr + i;
-	}
-
-	return 0;
-}
-//--------------------------------------------
-bool Memory::Ex::IsProcessRunning(pid_t pid)
-{
-	char dirbuf[DEFAULT_BUFFER_SIZE];
-	snprintf(dirbuf, sizeof(dirbuf), PROC_STR, pid);
-	struct stat status;
-	stat(dirbuf, &status);
-	return status.st_mode & S_IFDIR != 0;
-}
-#endif //INCLUDE_EXTERNALS
-
-#if INCLUDE_INTERNALS
-//Memory::In
-void Memory::In::ZeroMem(ptr_t src, size_t size)
-{
-	memset(src, 0x0, size + 1);
-}
-//--------------------------------------------
-int Memory::In::ProtectMemory(mem_t address, size_t size, int protection)
-{
-	long pagesize = sysconf(_SC_PAGE_SIZE);
-	address = address - (address % pagesize);
-	return mprotect((ptr_t)address, size, protection);
-}
-//--------------------------------------------
-bool Memory::In::IsBadPointer(ptr_t pointer)
-{
-	int fh = open((const char*)pointer, 0, 0);
-	int e = errno;
-
-	if (fh == -1 && e != EFAULT)
-	{
-		close(fh);
-		return false;
-	}
-
-	return true;
-}
-//--------------------------------------------
-pid_t Memory::In::GetCurrentProcessID()
-{
-	return getpid();
-}
-//--------------------------------------------
-bool Memory::In::ReadBuffer(mem_t address, ptr_t buffer, size_t size)
-{
-	memcpy((ptr_t)buffer, (ptr_t)address, size);
-	return true;
-}
-//--------------------------------------------
-bool Memory::In::WriteBuffer(mem_t address, ptr_t value, size_t size)
-{
-	memcpy((ptr_t)address, (ptr_t)value, size);
-	return true;
-}
-//--------------------------------------------
-mem_t Memory::In::PatternScan(mem_t baseAddr, mem_t endAddr, byte_t* pattern, cstr_t mask)
-{
-	mask = ParseMask(mask);
-	size_t patternLength = strlen(mask);
-	size_t scanSize = endAddr - baseAddr;
-	ProtectMemory(baseAddr, scanSize, PROT_EXEC | PROT_READ | PROT_WRITE);
-	for (size_t i = 0; i < scanSize; i++)
-	{
-		bool found = true;
-		for (size_t j = 0; j < patternLength; j++)
-		{
-			found &= mask[j] == UNKNOWN_BYTE || pattern[j] == *(byte_t*)(baseAddr + i + j);
-		}
-
-		if (found) return baseAddr + i;
-	}
-
-	return BAD_RETURN;
-}
-//Memory::In::Hook
-
-std::map<mem_t, std::vector<byte_t>> Memory::In::Hook::restore_arr;
-std::map<Memory::In::Hook::hMethod, size_t> Memory::In::Hook::hook_length_arr =
-{
-	{ hMethod::mJump0, sizeof(MOVABS_RAX_OP) + sizeof(EMPTY_AWORD) + sizeof(JMP_RAX_OP) },
-	{ hMethod::mJump1, sizeof(JMP_OP) + sizeof(EMPTY_DWORD) },
-	{ hMethod::mPush0, sizeof(MOVABS_RAX_OP) + sizeof(EMPTY_AWORD) + sizeof(PUSH_RAX_OP) + sizeof(RET_OP) }
-};
-
-bool Memory::In::Hook::Restore(mem_t address)
-{
-	if (restore_arr.count(address) <= 0) return false;
-	std::vector<byte_t> obytes = restore_arr.at(address);
-	WriteBuffer(address, obytes.data(), obytes.size());
-	return true;
-}
-//--------------------------------------------
-bool Memory::In::Hook::Detour(ptr_t src, ptr_t dst, size_t size, hMethod method)
-{
-	if (size < JUMP_LENGTH) return false;
-	if (ProtectMemory((mem_t)src, size, PROT_EXEC | PROT_READ | PROT_WRITE) != 0) return false;
-
-	//Save stolen bytes
-	byte_t* bytes = new byte_t[size];
-	ZeroMem(bytes, size);
-	memcpy(bytes, src, size);
-	std::vector<byte_t> vbytes;
-	vbytes.reserve(size);
-	for (size_t i = 0; i < size; i++)
-	{
-		vbytes.insert(vbytes.begin() + i, bytes[i]);
-	}
-	restore_arr.insert(std::pair<mem_t, std::vector<byte_t>>((mem_t)src, vbytes));
-
-	//Detour
-
-	switch(method)
-	{
-		case hMethod::mJump0:
-		{
-			mem_t jmpAddr = (mem_t)dst;
-#			if defined(ARCH_X86)
-			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-#			elif defined(ARCH_X64)
-			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-#			endif
-			*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = jmpAddr;
-			memcpy(src, CodeCave, sizeof(CodeCave));
-		}
-		break;
-
-		case hMethod::mJump1:
-		{
-			mem_t jmpAddr = ((mem_t)dst - (mem_t)src) - JUMP_LENGTH;
-			byte_t CodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-			*(mem_t*)((mem_t)CodeCave + sizeof(JMP_OP)) = jmpAddr;
-			memcpy(src, CodeCave, sizeof(CodeCave));
-		}
-		break;
-
-		case hMethod::mPush0:
-		{
-			mem_t pushAddr = (mem_t)dst;
-#			if defined(ARCH_X86)
-			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, PUSH_RAX_OP[0], RET_OP[0] };
-#			elif defined(ARCH_X64)
-			byte_t CodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, PUSH_RAX_OP[0], RET_OP[0] };
-#			endif
-			*(mem_t*)((mem_t)CodeCave + sizeof(MOVABS_RAX_OP)) = pushAddr;
-			memcpy(src, CodeCave, sizeof(CodeCave));
-		}
-		break;
-
-		default:
-		return false;
-		break;
-	}
-
-	return true;
-}
-//--------------------------------------------
-byte_t* Memory::In::Hook::TrampolineHook(ptr_t src, ptr_t dst, size_t size, hMethod method)
-{
-	if (size < JUMP_LENGTH) return 0;
-	byte_t* gateway = new byte_t[size + JUMP_LENGTH];
-	ProtectMemory((mem_t)gateway, size + JUMP_LENGTH, PROT_EXEC | PROT_READ | PROT_WRITE);
-	memcpy(gateway, src, size);
-#	if defined(ARCH_X86)
-	mem_t jmpBack = (mem_t)src - (mem_t)gateway - JUMP_LENGTH;
-	byte_t GatewayCodeCave[] = { JMP_OP, 0x0, 0x0, 0x0, 0x0 };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(JMP_OP)) = jmpBack;
-	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
-#	elif defined(ARCH_X64)
-	mem_t jmpBack = (mem_t)src + size;
-	byte_t GatewayCodeCave[] = { MOVABS_RAX_OP[0], MOVABS_RAX_OP[1], 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, JMP_RAX_OP[0], JMP_RAX_OP[1] };
-	*(mem_t*)((mem_t)GatewayCodeCave + sizeof(MOVABS_RAX_OP)) = jmpBack;
-	memcpy((ptr_t)((mem_t)gateway + size), (ptr_t)GatewayCodeCave, sizeof(GatewayCodeCave));
+	process_t process{};
+	process.pid = get_pid(process_name);
+	process.name = get_process_name(process.pid);
+#	if defined(MEM_WIN)
+	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
+#	elif defined(MEM_LINUX)
 #	endif
-	Detour(src, dst, size, method);
+	return process;
+}
+
+mem::process_t mem::ex::get_process(pid_t pid)
+{
+	process_t process{};
+	process.name = get_process_name(pid);
+	process.pid = pid;
+#	if defined(MEM_WIN)
+	process.handle = OpenProcess(PROCESS_ALL_ACCESS, NULL, process.pid);
+#	elif defined(MEM_LINUX)
+#	endif
+	return process;
+}
+
+mem::string_t mem::ex::get_process_name(pid_t pid)
+{
+	mem::string_t process_name;
+#   if defined(MEM_WIN)
+	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnap != INVALID_HANDLE_VALUE)
+	{
+		PROCESSENTRY32 procEntry;
+		procEntry.dwSize = sizeof(procEntry);
+
+		if (Process32First(hSnap, &procEntry))
+		{
+			do
+			{
+				if (pid == procEntry.th32ProcessID)
+				{
+					process_name = string_t(procEntry.szExeFile);
+					process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
+					break;
+				}
+			} while (Process32Next(hSnap, &procEntry));
+		}
+	}
+	CloseHandle(hSnap);
+#   elif defined(MEM_LINUX)
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", pid);
+	std::ifstream file(path_buffer, std::ios::binary);
+	if (!file.is_open()) return process_name;
+	std::stringstream ss;
+	ss << file.rdbuf();
+	std::size_t end = ss.str().find('\n', 0);
+	std::size_t begin = ss.str().rfind('/', end) + 1;
+	if (end == -1 || begin == -1 || begin == 0) return process_name;
+	process_name = ss.str().substr(begin, end - begin);
+	file.close();
+#   endif
+	return process_name;
+}
+
+mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_name)
+{
+	moduleinfo_t modinfo{};
+#   if defined(MEM_WIN)
+	HMODULE hMod;
+	GetModuleHandleEx(NULL, module_name.c_str(), &hMod);
+	MODULEINFO module_info = { 0 };
+	GetModuleInformation(process.handle, hMod, &module_info, sizeof(module_info));
+	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
+	modinfo.size = (size_t)module_info.SizeOfImage;
+	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
+	modinfo.handle = hMod;
+
+#   elif defined(MEM_LINUX)
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i/maps", process.pid);
+	std::ifstream file(path_buffer, std::ios::binary);
+	if (!file.is_open()) return modinfo;
+	std::stringstream ss;
+	ss << file.rdbuf();
+
+	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
+	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
+	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
+
+	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
+	std:size_t base_address_end = ss.str().find('-', base_address_pos);
+	std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
+
+	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
+	end_address_pos = ss.str().find('-', end_address_pos) + 1;
+	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
+	std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
+
+#   if defined(MEM_86)
+	mem::uintptr_t base_address = strtoul(base_address_str.c_str(), NULL, 16);
+	mem::uintptr_t end_address = strtoul(end_address_str.c_str(), NULL, 16);
+#   elif defined(MEM_64)
+	mem::uintptr_t base_address = strtoull(base_address_str.c_str(), NULL, 16);
+	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
+#   endif
+
+	modinfo.name = module_name_str;
+	modinfo.base = (mem::voidptr_t)base_address;
+	modinfo.end = (mem::voidptr_t)end_address;
+	modinfo.size = end_address - base_address;
+	file.close();
+
+#   endif
+
+	return modinfo;
+}
+
+mem::bool_t mem::ex::is_process_running(process_t process)
+{
+#   if defined(MEM_WIN)
+	DWORD exit_code;
+	GetExitCodeProcess(process.handle, &exit_code);
+	return (bool_t)(exit_code == STILL_ACTIVE);
+#   elif defined(MEM_LINUX)
+	struct stat sb;
+	char path_buffer[64];
+	snprintf(path_buffer, sizeof(path_buffer), "/proc/%i", process.pid);
+	stat(path_buffer, &sb);
+	return (bool_t)S_ISDIR(sb.st_mode);
+#   endif
+	return (bool_t)MEM_BAD_RETURN;
+}
+
+mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
+{
+#   if defined(MEM_WIN)
+	return (int_t)ReadProcessMemory(process.handle, (LPCVOID)src, (LPVOID)dst, (SIZE_T)size, NULL);
+#   elif defined(MEM_LINUX)
+	struct iovec iosrc;
+	struct iovec iodst;
+	iodst.iov_base = dst;
+	iodst.iov_len = size;
+	iosrc.iov_base = src;
+	iosrc.iov_len = size;
+	return process_vm_readv(process.pid, &iodst, 1, &iosrc, 1, 0);
+#   endif
+	return MEM_BAD_RETURN;
+}
+
+mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size_t size)
+{
+#   if defined(MEM_WIN)
+	return (int_t)WriteProcessMemory(process.handle, (LPVOID)src, (LPCVOID)data, (SIZE_T)size, NULL);
+#   elif defined(MEM_LINUX)
+	struct iovec iosrc;
+	struct iovec iodst;
+	iosrc.iov_base = data;
+	iosrc.iov_len = size;
+	iodst.iov_base = src;
+	iodst.iov_len = size;
+	return process_vm_writev(process.pid, &iosrc, 1, &iodst, 1, 0);
+#   endif
+	return MEM_BAD_RETURN;
+}
+
+mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
+{
+	byte_t* data = new byte_t[size];
+	mem::in::set(data, byte, size);
+	return write(process, src, data, size);
+}
+
+mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, prot_t protection)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	DWORD old_protect;
+	if (process.handle == (HANDLE)NULL || src <= (voidptr_t)NULL || size == 0 || protection <= NULL) return ret;
+	ret = (mem::int_t)VirtualProtectEx(process.handle, (LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
+mem::int_t mem::ex::protect(process_t process, voidptr_t begin, voidptr_t end, prot_t protection)
+{
+	return protect(process, begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
+}
+
+mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocation)
+{
+	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	if (process.handle == (HANDLE)NULL || size == 0 || allocation.protection == NULL || allocation.type == NULL) return ret;
+	ret = (mem::voidptr_t)VirtualAllocEx(process.handle, NULL, size, (DWORD)allocation.type, (DWORD)allocation.protection);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
+mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+{
+	mask = parse_mask(mask);
+	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
+	if (mask.length() != pattern.length())
+
+		for (uintptr_t i = 0; i < scan_size; i++)
+		{
+			bool found = true;
+			int8_t pbyte;
+			for (uintptr_t j = 0; j < mask.length(); j++)
+			{
+				read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
+				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
+			}
+
+			if (found) return (voidptr_t)((uintptr_t)base + i);
+		}
+
+	return (mem::voidptr_t)MEM_BAD_RETURN;
+}
+
+mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
+{
+	return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+}
+
+mem::int_t mem::ex::load_library(process_t process, string_t libpath)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	if (libpath.length() == 0 || process.handle == NULL) return ret;
+	size_t buffer_size = (size_t)((libpath.length() + 1) * sizeof(char_t));
+	alloc_t allocation;
+	allocation.type = MEM_COMMIT | MEM_RESERVE;
+	allocation.protection = PAGE_READWRITE;
+	voidptr_t buffer_ex = allocate(process, buffer_size, allocation);
+	if (buffer_ex == (voidptr_t)MEM_BAD_RETURN || buffer_ex == NULL) return ret;
+	if (write(process, buffer_ex, (voidptr_t)libpath.c_str(), buffer_size) == (int_t)MEM_BAD_RETURN) return ret;
+	HANDLE hThread = CreateRemoteThread(process.handle, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, buffer_ex, 0, 0);
+	if (hThread == INVALID_HANDLE_VALUE || hThread == NULL) return ret;
+	WaitForSingleObject(hThread, -1);
+	CloseHandle(hThread);
+	VirtualFreeEx(process.handle, buffer_ex, 0, MEM_RELEASE);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
+//mem::in
+
+mem::pid_t mem::in::get_pid()
+{
+#   if defined(MEM_WIN)
+	return (pid_t)::GetCurrentProcessId();
+#   elif defined(MEM_LINUX)
+	return (pid_t)::getpid();
+#   endif
+	return (pid_t)MEM_BAD_RETURN;
+}
+
+mem::process_t mem::in::get_process()
+{
+	process_t process{};
+
+	process.pid = get_pid();
+	process.name = get_process_name();
+#	if defined(MEM_WIN)
+	process.handle = GetCurrentProcess();
+#	elif defined(MEM_LINUX)
+#	endif
+
+	return process;
+}
+
+mem::string_t mem::in::get_process_name()
+{
+	mem::string_t process_name;
+#	if defined(MEM_WIN)
+	char_t buffer[MAX_PATH * sizeof(char_t)];
+	GetModuleFileName(NULL, buffer, sizeof(buffer)/sizeof(char_t));
+	process_name = buffer;
+	process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
+#	elif defined(MEM_LINUX)
+	process_name = mem::ex::get_process_name(get_pid());
+#	endif
+	return process_name;
+}
+
+mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_name)
+{
+	return mem::ex::get_module_info(process, module_name);
+}
+
+mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
+{
+	moduleinfo_t modinfo = {};
+#   if defined(MEM_WIN)
+	MODULEINFO module_info;
+	HMODULE hmod = GetModuleHandle(module_name.c_str());
+	HANDLE cur_handle = mem::in::get_process().handle;
+	if (hmod == NULL || cur_handle == NULL) return modinfo;
+	GetModuleInformation(cur_handle, hmod, &module_info, sizeof(module_info));
+	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
+	modinfo.size = (size_t)module_info.SizeOfImage;
+	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
+	modinfo.handle = hmod;
+#   elif defined(MEM_LINUX)
+	modinfo = get_module_info(get_process(), module_name);
+#   endif
+	return modinfo;
+}
+
+mem::void_t mem::in::read(voidptr_t src, voidptr_t dst, size_t size)
+{
+	memcpy(dst, src, size);
+}
+
+mem::void_t mem::in::write(voidptr_t src, voidptr_t data, size_t size)
+{
+	memcpy(src, data, size);
+}
+
+mem::void_t mem::in::set(voidptr_t src, byte_t byte, size_t size)
+{
+	memset(src, byte, size);
+}
+
+mem::int_t mem::in::protect(voidptr_t src, size_t size, prot_t protection)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#   if defined(MEM_WIN)
+	if (src <= (voidptr_t)0 || size <= 0 || protection <= (int_t)0) return ret;
+	DWORD old_protect;
+	ret = (int_t)VirtualProtect((LPVOID)src, (SIZE_T)size, (DWORD)protection, &old_protect);
+#   elif defined(MEM_LINUX)
+	long pagesize = sysconf(_SC_PAGE_SIZE);
+	uintptr_t src_page = (uintptr_t)src - ((uintptr_t)src % pagesize);
+	ret = (int_t)mprotect((voidptr_t)src_page, size, protection);
+#   endif
+	return ret;
+}
+
+mem::int_t mem::in::protect(voidptr_t begin, voidptr_t end, prot_t protection)
+{
+	return protect(begin, (size_t)((uintptr_t)end - (uintptr_t)begin), protection);
+}
+
+mem::voidptr_t mem::in::allocate(size_t size, alloc_t allocation)
+{
+	voidptr_t addr = (voidptr_t)MEM_BAD_RETURN;
+#   if defined(MEM_WIN)
+	addr = VirtualAlloc(NULL, (SIZE_T)size, allocation.type, (DWORD)allocation.protection);
+#   elif defined(MEM_LINUX)
+	addr = mmap(NULL, size, allocation.protection, allocation.type, -1, 0);
+#   endif
+	return addr;
+}
+
+mem::int_t mem::in::detour_length(detour_int method)
+{
+	switch (method)
+	{
+	case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
+	case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
+	case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
+	case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
+	case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
+	case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
+	}
+
+	return (mem::int_t)MEM_BAD_RETURN;
+}
+
+mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method)
+{
+	int_t detour_size = detour_length(method);
+	prot_t protection;
+#	if defined(MEM_WIN)
+	protection = PAGE_EXECUTE_READWRITE;
+#	elif defined(MEM_LINUX)
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+#	endif
+	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
+	byte_t * stolen_bytes = new byte_t[size];
+	write(stolen_bytes, (byteptr_t)src, size);
+	g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
+	switch (method)
+	{
+	case detour_int::method0:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	case detour_int::method1:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD1);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_JMP)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	case detour_int::method2:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD2);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	case detour_int::method3:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD3);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_PUSH)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	case detour_int::method4:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD4);
+		*(uintptr_t*)((uintptr_t)detour_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)dst;
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	case detour_int::method5:
+	{
+		byte_t detour_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD5);
+		*(dword_t*)((uintptr_t)detour_buffer + sizeof(MEM_CALL)) = (dword_t)((uintptr_t)dst - (uintptr_t)src - detour_size);
+		write(src, detour_buffer, sizeof(detour_buffer));
+		break;
+	}
+
+	default:
+	{
+		return (mem::int_t)MEM_BAD_RETURN;
+		break;
+	}
+	}
+
+	return !(MEM_BAD_RETURN);
+}
+
+mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, voidptr_t gateway_out)
+{
+	int_t detour_size = detour_length(method);
+	alloc_t allocation;
+	prot_t protection;
+#	if defined(MEM_WIN)
+	protection = PAGE_EXECUTE_READWRITE;
+	allocation.type = MEM_COMMIT | MEM_RESERVE;
+	allocation.protection = PAGE_EXECUTE_READWRITE;
+#	elif defined(MEM_LINUX)
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;;
+	allocation.protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+	allocation.type = MAP_ANON | MAP_PRIVATE;
+#	endif
+
+	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+
+	byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
+	*(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
+	size_t gateway_size = size + sizeof(gateway_buffer);
+	voidptr_t gateway = allocate(gateway_size, allocation);
+	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
+	set(gateway, 0x0, gateway_size);
+	write(gateway, (byteptr_t)src, size);
+	write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
+
+#	if defined(MEM_WIN)
+#	elif defined(MEM_LINUX)
+	protection = PROT_EXEC | PROT_READ;
+#	endif
+
+	protect(gateway, gateway_size, protection);
+	detour(src, dst, size, method);
 	return gateway;
 }
-#endif //INCLUDE_INTERNALS
-#endif //Linux
+
+mem::void_t mem::in::detour_restore(voidptr_t src)
+{
+	prot_t protection;
+#   if defined(MEM_WIN)
+	protection = PAGE_EXECUTE_READWRITE;
+#   elif defined(MEM_LINUX)
+	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
+#   endif
+
+	size_t size = (size_t)g_detour_restore_array[src].length();
+	protect(src, size, protection);
+	write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
+}
+
+mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
+{
+	mask = parse_mask(mask);
+	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
+	if (mask.length() != pattern.length())
+
+		for (uintptr_t i = 0; i < scan_size; i++)
+		{
+			bool found = true;
+			for (uintptr_t j = 0; j < mask.length(); j++)
+			{
+				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
+			}
+
+			if (found) return (voidptr_t)((uintptr_t)base + i);
+		}
+
+	return (mem::voidptr_t)MEM_BAD_RETURN;
+}
+
+mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
+{
+	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
+}
+
+mem::int_t mem::in::load_library(string_t libpath)
+{
+	int_t ret = (int_t)MEM_BAD_RETURN;
+#	if defined(MEM_WIN)
+	ret = (LoadLibrary(libpath.c_str()) == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+#	elif defined(MEM_LINUX)
+#	endif
+	return ret;
+}
+
+#endif //MEM_COMPATIBLE
