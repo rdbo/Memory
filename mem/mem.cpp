@@ -558,10 +558,10 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t si
 	write(gateway, (byteptr_t)src, size);
 	write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
 
-#if defined(MEM_WIN)
-#elif defined(MEM_LINUX)
+#	if defined(MEM_WIN)
+#	elif defined(MEM_LINUX)
 	protection = PROT_EXEC | PROT_READ;
-#endif
+#	endif
 
 	protect(gateway, gateway_size, protection);
 	detour(src, dst, size, method);
