@@ -93,7 +93,7 @@
 #if defined(MEM_UCS)
 #define MEM_STR(str) CONCAT_STR(L, str)
 #elif defined(MEM_MBCS)
-#define MEM_STR(str) CONCAT_STR(str)
+#define MEM_STR(str) str
 #endif
 
 //Assembly
@@ -242,7 +242,7 @@ namespace mem
 
 	typedef struct
 	{
-		prot_t protection = NULL;
+		prot_t protection = (prot_t)NULL;
 #		if defined(MEM_WIN)
 		uint32_t type = MEM_RESERVE | MEM_COMMIT;
 #		elif defined(MEM_LINUX)
