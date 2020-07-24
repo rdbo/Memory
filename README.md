@@ -6,10 +6,10 @@ https://github.com/rdbo/Memory
 Just copy the "mem" folder to your project, then include "mem/mem.hpp" and make sure to compile "mem/mem.cpp".  
 Check "docs/documentation.txt" for more guidance  
 
-#LICENSE
+# LICENSE
 Read LICENSE  
 
-#Overview
+# Overview
 ```
 mem::ex::get_pid
 mem::ex::get_process
@@ -41,7 +41,7 @@ mem::in::pattern_scan
 mem::in::load_library
 ```
 
-#TODO
+# TODO
 ```
 Add memory scanning
 Add support for allocating and protecting memory externally on Linux
