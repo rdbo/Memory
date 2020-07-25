@@ -220,12 +220,13 @@ namespace mem
 
 	typedef struct
 	{
-		string_t  name = MEM_STR("");
-		voidptr_t base = (voidptr_t)MEM_BAD_RETURN;
-		uintptr_t size = (uintptr_t)MEM_BAD_RETURN;
-		voidptr_t end = (voidptr_t)MEM_BAD_RETURN;
+		string_t  name   = MEM_STR("");
+		string_t  path   = MEM_STR("");
+		voidptr_t base   = (voidptr_t)MEM_BAD_RETURN;
+		uintptr_t size   = (uintptr_t)MEM_BAD_RETURN;
+		voidptr_t end    = (voidptr_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
-		HMODULE   handle;
+		HMODULE   handle = (HMODULE)NULL;
 #       elif defined(MEM_LINUX)
 #       endif
 	}moduleinfo_t;
@@ -235,7 +236,7 @@ namespace mem
 		string_t name = MEM_STR("");
 		pid_t    pid = (pid_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
-		HANDLE handle = NULL;
+		HANDLE handle = (HANDLE)NULL;
 #       elif defined(MEM_LINUX)
 #       endif
 	}process_t;

@@ -154,13 +154,16 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	moduleinfo_t modinfo{};
 #   if defined(MEM_WIN)
 	HMODULE hMod;
+	char_t modpath[MAX_PATH];
 	GetModuleHandleEx(NULL, module_name.c_str(), &hMod);
 	MODULEINFO module_info = { 0 };
 	GetModuleInformation(process.handle, hMod, &module_info, sizeof(module_info));
+	GetModuleFileName(hMod, modpath, sizeof(modpath) / sizeof(char_t));
 	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
 	modinfo.size = (size_t)module_info.SizeOfImage;
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
 	modinfo.handle = hMod;
+	modinfo.path = modpath;
 
 #   elif defined(MEM_LINUX)
 	char path_buffer[64];
@@ -183,6 +186,10 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
 	std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
 
+	std::size_t module_path_pos = ss.str().find('/', ss.str().rfind('-', module_name_pos));
+	std::size_t module_path_end = module_name_end;
+	std::string module_path_str = ss.str().substr(module_path_pos, module_path_end - module_path_pos);
+
 #   if defined(MEM_86)
 	mem::uintptr_t base_address = strtoul(base_address_str.c_str(), NULL, 16);
 	mem::uintptr_t end_address = strtoul(end_address_str.c_str(), NULL, 16);
@@ -193,8 +200,9 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 
 	modinfo.name = module_name_str;
 	modinfo.base = (mem::voidptr_t)base_address;
-	modinfo.end = (mem::voidptr_t)end_address;
+	modinfo.end  = (mem::voidptr_t)end_address;
 	modinfo.size = end_address - base_address;
+	modinfo.path = module_path_str;
 	file.close();
 
 #   endif
@@ -364,7 +372,7 @@ mem::string_t mem::in::get_process_name()
 {
 	mem::string_t process_name;
 #	if defined(MEM_WIN)
-	char_t buffer[MAX_PATH * sizeof(char_t)];
+	char_t buffer[MAX_PATH];
 	GetModuleFileName(NULL, buffer, sizeof(buffer)/sizeof(char_t));
 	process_name = buffer;
 	process_name = process_name.substr(process_name.rfind('\\', process_name.length()) + 1, process_name.length());
