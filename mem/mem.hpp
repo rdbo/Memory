@@ -168,6 +168,7 @@
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/uio.h>
+#include <dlfcn.h>
 #endif
 
 namespace mem
@@ -251,6 +252,15 @@ namespace mem
 #		endif
 	}alloc_t;
 
+	typedef struct
+	{
+		string_t path = "";
+#		if defined(MEM_WIN)
+#		elif defined(MEM_LINUX)
+		int_t mode = (int_t)RTLD_LAZY;
+#		endif
+	}lib_t;
+
 	enum class detour_int
 	{
 		method0,
@@ -291,7 +301,7 @@ namespace mem
 		voidptr_t    allocate(process_t process, size_t size, alloc_t allocation);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
-		int_t        load_library(process_t process, string_t libpath);
+		int_t        load_library(process_t process, lib_t lib);
 	}
 
 	namespace in
@@ -325,7 +335,7 @@ namespace mem
 		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
 		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
 		void_t       detour_restore(voidptr_t src);
-		int_t        load_library(string_t libpath);
+		int_t        load_library(lib_t lib); //Ignore "mode" on Windows
 	}
 }
 

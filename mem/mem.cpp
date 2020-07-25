@@ -4,26 +4,26 @@
 #include "mem.hpp"
 #if defined(MEM_COMPATIBLE)
 
-const mem::byte_t MEM_JMP[] = ASM_GENERATE(_MEM_JMP);
-const mem::byte_t MEM_JMP_RAX[] = ASM_GENERATE(_MEM_JMP_RAX);
-const mem::byte_t MEM_JMP_EAX[] = ASM_GENERATE(_MEM_JMP_EAX);
-const mem::byte_t MEM_CALL[] = ASM_GENERATE(_MEM_CALL);
-const mem::byte_t MEM_CALL_EAX[] = ASM_GENERATE(_MEM_CALL_EAX);
-const mem::byte_t MEM_CALL_RAX[] = ASM_GENERATE(_MEM_CALL_RAX);
+const mem::byte_t MEM_JMP[]        = ASM_GENERATE(_MEM_JMP);
+const mem::byte_t MEM_JMP_RAX[]    = ASM_GENERATE(_MEM_JMP_RAX);
+const mem::byte_t MEM_JMP_EAX[]    = ASM_GENERATE(_MEM_JMP_EAX);
+const mem::byte_t MEM_CALL[]       = ASM_GENERATE(_MEM_CALL);
+const mem::byte_t MEM_CALL_EAX[]   = ASM_GENERATE(_MEM_CALL_EAX);
+const mem::byte_t MEM_CALL_RAX[]   = ASM_GENERATE(_MEM_CALL_RAX);
 const mem::byte_t MEM_MOVABS_RAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
-const mem::byte_t MEM_MOV_EAX[] = ASM_GENERATE(_MEM_MOV_EAX);
-const mem::byte_t MEM_PUSH[] = ASM_GENERATE(_MEM_PUSH);
-const mem::byte_t MEM_PUSH_RAX[] = ASM_GENERATE(_MEM_PUSH_RAX);
-const mem::byte_t MEM_PUSH_EAX[] = ASM_GENERATE(_MEM_PUSH_EAX);
-const mem::byte_t MEM_RET[] = ASM_GENERATE(_MEM_RET);
-const mem::byte_t MEM_BYTE[] = ASM_GENERATE(_MEM_BYTE);
-const mem::byte_t MEM_WORD[] = ASM_GENERATE(_MEM_WORD);
-const mem::byte_t MEM_DWORD[] = ASM_GENERATE(_MEM_DWORD);
-const mem::byte_t MEM_QWORD[] = ASM_GENERATE(_MEM_QWORD);
+const mem::byte_t MEM_MOV_EAX[]    = ASM_GENERATE(_MEM_MOV_EAX);
+const mem::byte_t MEM_PUSH[]       = ASM_GENERATE(_MEM_PUSH);
+const mem::byte_t MEM_PUSH_RAX[]   = ASM_GENERATE(_MEM_PUSH_RAX);
+const mem::byte_t MEM_PUSH_EAX[]   = ASM_GENERATE(_MEM_PUSH_EAX);
+const mem::byte_t MEM_RET[]        = ASM_GENERATE(_MEM_RET);
+const mem::byte_t MEM_BYTE[]       = ASM_GENERATE(_MEM_BYTE);
+const mem::byte_t MEM_WORD[]       = ASM_GENERATE(_MEM_WORD);
+const mem::byte_t MEM_DWORD[]      = ASM_GENERATE(_MEM_DWORD);
+const mem::byte_t MEM_QWORD[]      = ASM_GENERATE(_MEM_QWORD);
 #if defined(MEM_86)
-const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOV_EAX);
+const mem::byte_t MEM_MOV_REGAX[]  = ASM_GENERATE(_MEM_MOV_EAX);
 #elif defined(MEM_64)
-const mem::byte_t MEM_MOV_REGAX[] = ASM_GENERATE(_MEM_MOVABS_RAX);
+const mem::byte_t MEM_MOV_REGAX[]  = ASM_GENERATE(_MEM_MOVABS_RAX);
 #endif
 
 std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
@@ -320,18 +320,18 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 	return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
-mem::int_t mem::ex::load_library(process_t process, string_t libpath)
+mem::int_t mem::ex::load_library(process_t process, lib_t libpath)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
-	if (libpath.length() == 0 || process.handle == NULL) return ret;
-	size_t buffer_size = (size_t)((libpath.length() + 1) * sizeof(char_t));
+	if (lib.path.length() == 0 || process.handle == NULL) return ret;
+	size_t buffer_size = (size_t)((lib.path.length() + 1) * sizeof(char_t));
 	alloc_t allocation;
 	allocation.type = MEM_COMMIT | MEM_RESERVE;
 	allocation.protection = PAGE_READWRITE;
 	voidptr_t buffer_ex = allocate(process, buffer_size, allocation);
 	if (buffer_ex == (voidptr_t)MEM_BAD_RETURN || buffer_ex == NULL) return ret;
-	if (write(process, buffer_ex, (voidptr_t)libpath.c_str(), buffer_size) == (int_t)MEM_BAD_RETURN) return ret;
+	if (write(process, buffer_ex, (voidptr_t)lib.path.c_str(), buffer_size) == (int_t)MEM_BAD_RETURN) return ret;
 	HANDLE hThread = CreateRemoteThread(process.handle, 0, 0, (LPTHREAD_START_ROUTINE)LoadLibrary, buffer_ex, 0, 0);
 	if (hThread == INVALID_HANDLE_VALUE || hThread == NULL) return ret;
 	WaitForSingleObject(hThread, -1);
@@ -615,12 +615,13 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
-mem::int_t mem::in::load_library(string_t libpath)
+mem::int_t mem::in::load_library(lib_t lib)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
-	ret = (LoadLibrary(libpath.c_str()) == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+	ret = (LoadLibrary(lib.path.c_str()) == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
 #	elif defined(MEM_LINUX)
+	ret = (dlopen(lib.path.c_str(), lib.mode) == (mem::voidptr_t)-1 ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
 #	endif
 	return ret;
 }
