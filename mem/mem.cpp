@@ -296,7 +296,7 @@ mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocat
 mem::voidptr_t mem::ex::scan(process_t process, voidptr_t data, voidptr_t base, voidptr_t end, size_t size)
 {
 	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
-	for(uintptr_t i = 0; i < (uintptr_t)base; i += size)
+	for(uintptr_t i = 0; (uintptr_t)base + i < (uintptr_t)end; i += size)
 	{
 		voidptr_t read_bytes = malloc(size);
 		mem::ex::read(process, (voidptr_t)((uintptr_t)base + i), read_bytes, size);
@@ -477,6 +477,21 @@ mem::voidptr_t mem::in::allocate(size_t size, alloc_t allocation)
 mem::bool_t mem::in::compare(voidptr_t pdata1, voidptr_t pdata2, size_t size)
 {
 	return (bool_t)(memcmp(pdata1, pdata2, size) == 0);
+}
+
+mem::voidptr_t mem::in::scan(voidptr_t data, voidptr_t base, voidptr_t end, size_t size)
+{
+	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+	for(uintptr_t i = 0; (uintptr_t)base + i < (uintptr_t)end; i += size)
+	{
+		if(compare(data, (voidptr_t)((uintptr_t)base + i), size))
+		{
+			ret = (voidptr_t)((uintptr_t)base + i);
+			break;
+		}
+	}
+
+	return ret;
 }
 
 mem::int_t mem::in::detour_length(detour_int method)
