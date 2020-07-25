@@ -175,19 +175,23 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 
 	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
 	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
+	if(module_name_pos == -1 || module_name_end == -1) return modinfo;
 	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
 
 	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
 	std:size_t base_address_end = ss.str().find('-', base_address_pos);
+	if(base_address_pos == -1 || base_address_end == -1) return modinfo;
 	std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
 
 	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
 	end_address_pos = ss.str().find('-', end_address_pos) + 1;
 	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
+	if(end_address_pos == -1 || end_address_end == -1) return modinfo;
 	std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
 
 	std::size_t module_path_pos = ss.str().find('/', ss.str().rfind('-', module_name_pos));
 	std::size_t module_path_end = module_name_end;
+	if(module_path_pos == -1 || module_path_end == -1) return modinfo;
 	std::string module_path_str = ss.str().substr(module_path_pos, module_path_end - module_path_pos);
 
 #   if defined(MEM_86)
@@ -198,11 +202,17 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
+	if(module_name_pos == -1 || module_name_end == -1 ||
+		base_address_pos == -1 || base_address_end == -1 ||
+		end_address_pos == -1 || end_address_end == -1 ||
+	  	module_path_pos == -1 || module_path_end == -1) return modinfo;
+
 	modinfo.name = module_name_str;
 	modinfo.base = (mem::voidptr_t)base_address;
 	modinfo.end  = (mem::voidptr_t)end_address;
 	modinfo.size = end_address - base_address;
 	modinfo.path = module_path_str;
+	ss.str("");
 	file.close();
 
 #   endif
@@ -315,13 +325,12 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 	mask = parse_mask(mask);
 	voidptr_t ret = (mem::voidptr_t)MEM_BAD_RETURN;
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-	if (mask.length() < pattern.length()) return ret;
 
 	for (uintptr_t i = 0; i < scan_size; i++)
 	{
 		bool found = true;
 		int8_t pbyte;
-		for (uintptr_t j = 0; j < mask.length(); j++)
+		for (uintptr_t j = 0; j < pattern.length(); j++)
 		{
 			read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
 			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
@@ -637,12 +646,11 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 	mem::voidptr_t ret = (mem::voidptr_t)MEM_BAD_RETURN;
 	mask = parse_mask(mask);
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-	if (mask.length() < pattern.length()) return ret;
 
 	for (uintptr_t i = 0; i < scan_size; i++)
 	{
 		bool found = true;
-		for (uintptr_t j = 0; j < mask.length(); j++)
+		for (uintptr_t j = 0; j < pattern.length(); j++)
 		{
 			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
 		}
