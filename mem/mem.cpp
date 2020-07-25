@@ -293,26 +293,48 @@ mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocat
 	return ret;
 }
 
+mem::voidptr_t mem::ex::scan(process_t process, voidptr_t data, voidptr_t base, voidptr_t end, size_t size)
+{
+	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+	for(uintptr_t i = 0; i < (uintptr_t)base; i += size)
+	{
+		voidptr_t read_bytes = malloc(size);
+		mem::ex::read(process, (voidptr_t)((uintptr_t)base + i), read_bytes, size);
+		if(in::compare(data, read_bytes, size))
+		{
+			ret = (voidptr_t)((uintptr_t)base + i);
+			break;
+		}
+	}
+
+	return ret;
+}
+
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
 	mask = parse_mask(mask);
+	voidptr_t ret = (mem::voidptr_t)MEM_BAD_RETURN;
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-	if (mask.length() != pattern.length())
+	if (mask.length() < pattern.length()) return ret;
 
-		for (uintptr_t i = 0; i < scan_size; i++)
+	for (uintptr_t i = 0; i < scan_size; i++)
+	{
+		bool found = true;
+		int8_t pbyte;
+		for (uintptr_t j = 0; j < mask.length(); j++)
 		{
-			bool found = true;
-			int8_t pbyte;
-			for (uintptr_t j = 0; j < mask.length(); j++)
-			{
-				read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
-				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
-			}
-
-			if (found) return (voidptr_t)((uintptr_t)base + i);
+			read(process, (voidptr_t)((uintptr_t)base + i + j), &pbyte, 1);
+			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == pbyte;
 		}
 
-	return (mem::voidptr_t)MEM_BAD_RETURN;
+		if (found)
+		{
+			ret = (voidptr_t)((uintptr_t)base + i);
+			break;
+		}
+	}
+
+	return ret;
 }
 
 mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size)
@@ -450,6 +472,11 @@ mem::voidptr_t mem::in::allocate(size_t size, alloc_t allocation)
 	addr = mmap(NULL, size, allocation.protection, allocation.type, -1, 0);
 #   endif
 	return addr;
+}
+
+mem::bool_t mem::in::compare(voidptr_t pdata1, voidptr_t pdata2, size_t size)
+{
+	return (bool_t)(memcmp(pdata1, pdata2, size) == 0);
 }
 
 mem::int_t mem::in::detour_length(detour_int method)
@@ -592,22 +619,27 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
 
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)
 {
+	mem::voidptr_t ret = (mem::voidptr_t)MEM_BAD_RETURN;
 	mask = parse_mask(mask);
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
-	if (mask.length() != pattern.length())
+	if (mask.length() < pattern.length()) return ret;
 
-		for (uintptr_t i = 0; i < scan_size; i++)
+	for (uintptr_t i = 0; i < scan_size; i++)
+	{
+		bool found = true;
+		for (uintptr_t j = 0; j < mask.length(); j++)
 		{
-			bool found = true;
-			for (uintptr_t j = 0; j < mask.length(); j++)
-			{
-				found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
-			}
-
-			if (found) return (voidptr_t)((uintptr_t)base + i);
+			found &= mask[j] == MEM_UNKNOWN_BYTE || pattern[j] == *(int8_t*)((uintptr_t)base + i + j);
 		}
 
-	return (mem::voidptr_t)MEM_BAD_RETURN;
+		if (found)
+		{
+			ret = (voidptr_t)((uintptr_t)base + i);
+			break;
+		}
+	}
+
+	return ret;
 }
 
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size)

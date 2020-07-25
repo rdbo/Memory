@@ -299,6 +299,13 @@ namespace mem
 		int_t        protect(process_t process, voidptr_t src, size_t size, prot_t protection);
 		int_t        protect(process_t process, voidptr_t begin, voidptr_t end, prot_t protection);
 		voidptr_t    allocate(process_t process, size_t size, alloc_t allocation);
+		voidptr_t    scan(process_t process, voidptr_t data, voidptr_t base, voidptr_t end, size_t size);
+		template <typename type_t>
+		voidptr_t    scan(process_t process, type_t data, voidptr_t base, voidptr_t end)
+		{
+			type_t holder = data;
+			return scan(process, &holder, base, end, sizeof(type_t));
+		}
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(process_t process, bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
 		int_t        load_library(process_t process, lib_t lib);
@@ -331,6 +338,7 @@ namespace mem
 		int_t        protect(voidptr_t src, size_t size, prot_t protection);
 		int_t        protect(voidptr_t begin, voidptr_t end, prot_t protection);
 		voidptr_t    allocate(size_t size, alloc_t allocation);
+		bool_t       compare(voidptr_t pdata1, voidptr_t pdata2, size_t size);
 		int_t        detour_length(detour_int method);
 		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
 		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
