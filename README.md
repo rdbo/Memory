@@ -46,4 +46,7 @@ mem::in::load_library
 Add memory scanning
 Add support for allocating and protecting memory externally on Linux
 Add support for loading libraries externally on Linux
+Clean up code
+Add a simple documentation
+Add some examples
 ```
