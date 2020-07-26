@@ -26,8 +26,6 @@ const mem::byte_t MEM_MOV_REGAX[]  = ASM_GENERATE(_MEM_MOV_EAX);
 const mem::byte_t MEM_MOV_REGAX[]  = ASM_GENERATE(_MEM_MOVABS_RAX);
 #endif
 
-std::map<mem::voidptr_t, mem::bytearray_t> g_detour_restore_array;
-
 //mem
 
 mem::string_t mem::parse_mask(string_t mask)
@@ -518,7 +516,7 @@ mem::int_t mem::in::detour_length(detour_int method)
 	return (mem::int_t)MEM_BAD_RETURN;
 }
 
-mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method)
+mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method, bytearray_t* stolen_bytes)
 {
 	int_t detour_size = detour_length(method);
 	prot_t protection;
@@ -528,9 +526,12 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int 
 	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #	endif
 	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (mem::int_t)MEM_BAD_RETURN;
-	byte_t * stolen_bytes = new byte_t[size];
-	write(stolen_bytes, (byteptr_t)src, size);
-	g_detour_restore_array.insert(std::pair<voidptr_t, bytearray_t>(src, bytearray_t((char*)stolen_bytes)));
+	if(stolen_bytes != NULL)
+	{
+		*stolen_bytes = {};
+    	for(size_t i = 0; i < size; i++)
+        	stolen_bytes->insert(i, 1, reinterpret_cast<int8_t*>(src)[i]);
+	}
 	switch (method)
 	{
 	case detour_int::method0:
@@ -591,7 +592,7 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int 
 	return !(MEM_BAD_RETURN);
 }
 
-mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, voidptr_t gateway_out)
+mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, bytearray_t* stolen_bytes)
 {
 	int_t detour_size = detour_length(method);
 	alloc_t allocation;
@@ -623,11 +624,11 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t si
 #	endif
 
 	protect(gateway, gateway_size, protection);
-	detour(src, dst, size, method);
+	detour(src, dst, size, method, stolen_bytes);
 	return gateway;
 }
 
-mem::void_t mem::in::detour_restore(voidptr_t src)
+mem::void_t mem::in::detour_restore(voidptr_t src, bytearray_t stolen_bytes)
 {
 	prot_t protection;
 #   if defined(MEM_WIN)
@@ -636,9 +637,8 @@ mem::void_t mem::in::detour_restore(voidptr_t src)
 	protection = PROT_EXEC | PROT_READ | PROT_WRITE;
 #   endif
 
-	size_t size = (size_t)g_detour_restore_array[src].length();
-	protect(src, size, protection);
-	write(src, (byteptr_t)g_detour_restore_array[src].data(), size);
+	protect(src, stolen_bytes.length(), protection);
+	write(src, (mem::voidptr_t)stolen_bytes.data(), (mem::size_t)stolen_bytes.length());
 }
 
 mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end)

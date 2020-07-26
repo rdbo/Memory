@@ -347,9 +347,9 @@ namespace mem
 			return scan(&holder, base, end, sizeof(type_t));
 		}
 		int_t        detour_length(detour_int method);
-		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0);
-		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, voidptr_t gateway_out = NULL);
-		void_t       detour_restore(voidptr_t src);
+		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
+		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
+		void_t       detour_restore(voidptr_t src, bytearray_t stolen_bytes);
 		int_t        load_library(lib_t lib); //Ignore "mode" on Windows
 	}
 }
