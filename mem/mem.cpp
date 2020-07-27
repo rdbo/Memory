@@ -173,23 +173,23 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 
 	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
 	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
-	if(module_name_pos == -1 || module_name_end == -1) return modinfo;
+	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1) return modinfo;
 	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
 
-	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name.c_str(), 0)) + 1;
+	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name_str.c_str(), 0)) + 1;
 	std:size_t base_address_end = ss.str().find('-', base_address_pos);
-	if(base_address_pos == -1 || base_address_end == -1) return modinfo;
+	if(base_address_pos == (std::size_t)-1 || base_address_end == (std::size_t)-1) return modinfo;
 	std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
 
-	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name.c_str()));
+	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name_str.c_str()));
 	end_address_pos = ss.str().find('-', end_address_pos) + 1;
 	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
-	if(end_address_pos == -1 || end_address_end == -1) return modinfo;
+	if(end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1) return modinfo;
 	std::string end_address_str = ss.str().substr(end_address_pos, end_address_end - end_address_pos);
 
-	std::size_t module_path_pos = ss.str().find('/', ss.str().rfind('-', module_name_pos));
-	std::size_t module_path_end = module_name_end;
-	if(module_path_pos == -1 || module_path_end == -1) return modinfo;
+	std::size_t module_path_pos = ss.str().find('/', end_address_end);
+	std::size_t module_path_end = ss.str().find('\n', module_path_pos);
+	if(module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1) return modinfo;
 	std::string module_path_str = ss.str().substr(module_path_pos, module_path_end - module_path_pos);
 
 #   if defined(MEM_86)
@@ -200,10 +200,10 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-	if(module_name_pos == -1 || module_name_end == -1 ||
-		base_address_pos == -1 || base_address_end == -1 ||
-		end_address_pos == -1 || end_address_end == -1 ||
-	  	module_path_pos == -1 || module_path_end == -1) return modinfo;
+	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1 ||
+		base_address_pos == (std::size_t)-1 || base_address_end == (std::size_t)-1 ||
+		end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1 ||
+	  	module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1) return modinfo;
 
 	modinfo.name = module_name_str;
 	modinfo.base = (mem::voidptr_t)base_address;
