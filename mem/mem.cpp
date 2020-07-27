@@ -85,7 +85,7 @@ mem::pid_t mem::ex::get_pid(string_t process_name)
 
 mem::process_t mem::ex::get_process(string_t process_name)
 {
-	process_t process{};
+	process_t process;
 	process.pid = get_pid(process_name);
 	process.name = get_process_name(process.pid);
 #	if defined(MEM_WIN)
@@ -97,7 +97,7 @@ mem::process_t mem::ex::get_process(string_t process_name)
 
 mem::process_t mem::ex::get_process(pid_t pid)
 {
-	process_t process{};
+	process_t process;
 	process.name = get_process_name(pid);
 	process.pid = pid;
 #	if defined(MEM_WIN)
@@ -149,7 +149,7 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 
 mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_name)
 {
-	moduleinfo_t modinfo{};
+	moduleinfo_t modinfo;
 #   if defined(MEM_WIN)
 	HMODULE hMod;
 	char_t modpath[MAX_PATH];
@@ -385,7 +385,7 @@ mem::pid_t mem::in::get_pid()
 
 mem::process_t mem::in::get_process()
 {
-	process_t process{};
+	process_t process;
 
 	process.pid = get_pid();
 	process.name = get_process_name();
@@ -418,7 +418,7 @@ mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_na
 
 mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 {
-	moduleinfo_t modinfo = {};
+	moduleinfo_t modinfo;
 #   if defined(MEM_WIN)
 	MODULEINFO module_info;
 	HMODULE hmod = GetModuleHandle(module_name.c_str());
