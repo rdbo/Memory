@@ -176,12 +176,12 @@ mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_na
 	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1) return modinfo;
 	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
 
-	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(module_name_str.c_str(), 0)) + 1;
+	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(mem::string_t('/' + module_name_str + '\n').c_str(), 0)) + 1;
 	std:size_t base_address_end = ss.str().find('-', base_address_pos);
 	if(base_address_pos == (std::size_t)-1 || base_address_end == (std::size_t)-1) return modinfo;
 	std::string base_address_str = ss.str().substr(base_address_pos, base_address_end - base_address_pos);
 
-	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(module_name_str.c_str()));
+	std::size_t end_address_pos = ss.str().rfind('\n', ss.str().rfind(mem::string_t('/' + module_name_str + '\n').c_str()));
 	end_address_pos = ss.str().find('-', end_address_pos) + 1;
 	std::size_t end_address_end = ss.str().find(' ', end_address_pos);
 	if(end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1) return modinfo;
