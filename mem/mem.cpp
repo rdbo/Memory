@@ -609,8 +609,8 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, size_t s
 
 	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 
-	voidptr_t gateway_buffer = mem::in::allocate(detour_size, allocation);
-	detour(gateway_buffer, (mem::voidptr_t)((mem::uintptr_t)src + size), size, method);
+	voidptr_t gateway_buffer = allocate(detour_size, allocation);
+	detour(gateway_buffer, (voidptr_t)((uintptr_t)src + size), size, method);
 	size_t gateway_size = size + detour_size;
 	voidptr_t gateway = allocate(gateway_size, allocation);
 	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
