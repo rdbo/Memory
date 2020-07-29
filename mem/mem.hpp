@@ -229,8 +229,9 @@ namespace mem
 #       if defined(MEM_WIN)
 		HMODULE   handle = (HMODULE)NULL;
 #       elif defined(MEM_LINUX)
+		void*     handle = (void*)NULL; //this should only be used internally on non-executable modules
 #       endif
-	}moduleinfo_t;
+	}module_t;
 
 	typedef struct
 	{
@@ -279,7 +280,7 @@ namespace mem
 		process_t    get_process(string_t process_name);
 		process_t    get_process(pid_t pid);
 		string_t     get_process_name(pid_t pid);
-		moduleinfo_t get_module_info(process_t process, string_t module_name);
+		module_t     get_module(process_t process, string_t module_name);
 		bool_t       is_process_running(process_t process);
 		int_t        read(process_t process, voidptr_t src, voidptr_t dst, size_t size);
 		template <typename type_t>
@@ -316,8 +317,8 @@ namespace mem
 		pid_t        get_pid();
 		process_t    get_process();
 		string_t     get_process_name();
-		moduleinfo_t get_module_info(process_t process, string_t module_name);
-		moduleinfo_t get_module_info(string_t module_name);
+		module_t     get_module(process_t process, string_t module_name);
+		module_t     get_module(string_t module_name);
 		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, voidptr_t end);
 		voidptr_t    pattern_scan(bytearray_t pattern, string_t mask, voidptr_t base, size_t size);
 		void_t       read(voidptr_t src, voidptr_t dst, size_t size);
@@ -346,11 +347,11 @@ namespace mem
 			type_t holder = data;
 			return scan(&holder, base, end, sizeof(type_t));
 		}
-		int_t        detour_length(detour_int method);
-		int_t        detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
-		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
+		size_t       detour_length(detour_int method);
+		int_t        detour(voidptr_t src, voidptr_t dst, size_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
+		voidptr_t    detour_trampoline(voidptr_t src, voidptr_t dst, size_t size, detour_int method = detour_int::method0, bytearray_t* stolen_bytes = NULL);
 		void_t       detour_restore(voidptr_t src, bytearray_t stolen_bytes);
-		int_t        load_library(lib_t lib); //Ignore "mode" on Windows
+		int_t        load_library(lib_t lib, module_t* mod = NULL);
 	}
 }
 

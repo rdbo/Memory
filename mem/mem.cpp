@@ -147,9 +147,9 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 	return process_name;
 }
 
-mem::moduleinfo_t mem::ex::get_module_info(process_t process, string_t module_name)
+mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 {
-	moduleinfo_t modinfo;
+	module_t modinfo;
 #   if defined(MEM_WIN)
 	HMODULE hMod;
 	char_t modpath[MAX_PATH];
@@ -411,14 +411,14 @@ mem::string_t mem::in::get_process_name()
 	return process_name;
 }
 
-mem::moduleinfo_t mem::in::get_module_info(process_t process, string_t module_name)
+mem::module_t mem::in::get_module(process_t process, string_t module_name)
 {
-	return mem::ex::get_module_info(process, module_name);
+	return mem::ex::get_module(process, module_name);
 }
 
-mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
+mem::module_t mem::in::get_module(string_t module_name)
 {
-	moduleinfo_t modinfo;
+	module_t modinfo;
 #   if defined(MEM_WIN)
 	MODULEINFO module_info;
 	HMODULE hmod = GetModuleHandle(module_name.c_str());
@@ -430,7 +430,7 @@ mem::moduleinfo_t mem::in::get_module_info(string_t module_name)
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
 	modinfo.handle = hmod;
 #   elif defined(MEM_LINUX)
-	modinfo = get_module_info(get_process(), module_name);
+	modinfo = get_module(get_process(), module_name);
 #   endif
 	return modinfo;
 }
@@ -501,24 +501,24 @@ mem::voidptr_t mem::in::scan(voidptr_t data, voidptr_t base, voidptr_t end, size
 	return ret;
 }
 
-mem::int_t mem::in::detour_length(detour_int method)
+mem::size_t mem::in::detour_length(detour_int method)
 {
 	switch (method)
 	{
-	case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
-	case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
-	case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
-	case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
-	case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
-	case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
+		case detour_int::method0: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD0); break;
+		case detour_int::method1: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD1); break;
+		case detour_int::method2: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD2); break;
+		case detour_int::method3: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD3); break;
+		case detour_int::method4: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD4); break;
+		case detour_int::method5: return CALC_ASM_LENGTH(_MEM_DETOUR_METHOD5); break;
 	}
 
 	return (mem::int_t)MEM_BAD_RETURN;
 }
 
-mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int method, bytearray_t* stolen_bytes)
+mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, size_t size, detour_int method, bytearray_t* stolen_bytes)
 {
-	int_t detour_size = detour_length(method);
+	size_t detour_size = detour_length(method);
 	prot_t protection;
 #	if defined(MEM_WIN)
 	protection = PAGE_EXECUTE_READWRITE;
@@ -592,9 +592,9 @@ mem::int_t mem::in::detour(voidptr_t src, voidptr_t dst, int_t size, detour_int 
 	return !(MEM_BAD_RETURN);
 }
 
-mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, int_t size, detour_int method, bytearray_t* stolen_bytes)
+mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, size_t size, detour_int method, bytearray_t* stolen_bytes)
 {
-	int_t detour_size = detour_length(method);
+	size_t detour_size = detour_length(method);
 	alloc_t allocation;
 	prot_t protection;
 #	if defined(MEM_WIN)
@@ -670,13 +670,19 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 	return pattern_scan(pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
-mem::int_t mem::in::load_library(lib_t lib)
+mem::int_t mem::in::load_library(lib_t lib, module_t* mod)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
-	ret = (LoadLibrary(lib.path.c_str()) == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+	HMODULE h_mod = LoadLibrary(lib.path.c_str());
+	ret = (h_mod == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+	if(mod != NULL)
+		mod->handle = h_mod;
 #	elif defined(MEM_LINUX)
-	ret = (dlopen(lib.path.c_str(), lib.mode) == (mem::voidptr_t)-1 ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+	void* h_mod = dlopen(lib.path.c_str(), lib.mode);
+	ret = (h_mod == (mem::voidptr_t)-1 ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
+	if(mod != NULL)
+		mod->handle = h_mod;
 #	endif
 	return ret;
 }
