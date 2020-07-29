@@ -676,13 +676,18 @@ mem::int_t mem::in::load_library(lib_t lib, module_t* mod)
 #	if defined(MEM_WIN)
 	HMODULE h_mod = LoadLibrary(lib.path.c_str());
 	ret = (h_mod == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
-	if(mod != NULL)
-		mod->handle = h_mod;
+	if(mod != NULL && ret != (mem::int_t)MEM_BAD_RETURN)
+	{
+		*mod = mem::in::get_module(lib.path.substr(lib.path.rfind('\\', -1), -1));
+	}
 #	elif defined(MEM_LINUX)
 	void* h_mod = dlopen(lib.path.c_str(), lib.mode);
 	ret = (h_mod == (mem::voidptr_t)-1 ? MEM_BAD_RETURN : !MEM_BAD_RETURN);
-	if(mod != NULL)
+	if(mod != NULL && ret != (mem::int_t)MEM_BAD_RETURN)
+	{
+		*mod = mem::in::get_module(lib.path.substr(lib.path.rfind('/', -1), -1));
 		mod->handle = h_mod;
+	}
 #	endif
 	return ret;
 }

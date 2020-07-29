@@ -169,6 +169,7 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <dlfcn.h>
+#include <link.h>
 #endif
 
 namespace mem
