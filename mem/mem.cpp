@@ -609,16 +609,17 @@ mem::voidptr_t mem::in::detour_trampoline(voidptr_t src, voidptr_t dst, size_t s
 
 	if (detour_size == MEM_BAD_RETURN || size < detour_size || protect(src, size, protection) == MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 
-	byte_t gateway_buffer[] = ASM_GENERATE(_MEM_DETOUR_METHOD0);
-	*(uintptr_t*)((uintptr_t)gateway_buffer + sizeof(MEM_MOV_REGAX)) = (uintptr_t)((uintptr_t)src + size);
-	size_t gateway_size = size + sizeof(gateway_buffer);
+	voidptr_t gateway_buffer = mem::in::allocate(detour_size, allocation);
+	detour(gateway_buffer, (mem::voidptr_t)((mem::uintptr_t)src + size), size, method);
+	size_t gateway_size = size + detour_size;
 	voidptr_t gateway = allocate(gateway_size, allocation);
 	if (!gateway || gateway == (voidptr_t)MEM_BAD_RETURN) return (voidptr_t)MEM_BAD_RETURN;
 	set(gateway, 0x0, gateway_size);
 	write(gateway, (byteptr_t)src, size);
-	write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, sizeof(gateway_buffer));
+	write((voidptr_t)((uintptr_t)gateway + size), gateway_buffer, detour_size);
 
 #	if defined(MEM_WIN)
+	protection = PAGE_EXECUTE_READ;
 #	elif defined(MEM_LINUX)
 	protection = PROT_EXEC | PROT_READ;
 #	endif
