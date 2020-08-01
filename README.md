@@ -19,6 +19,7 @@ mem::ex::is_process_running
 mem::ex::read
 mem::ex::write
 mem::ex::set
+mem::ex::scan
 mem::ex::protect
 mem::ex::allocate
 mem::ex::pattern_scan
@@ -31,6 +32,7 @@ mem::in::get_module_info
 mem::in::read
 mem::in::write
 mem::in::set
+mem::in::scan
 mem::in::protect
 mem::in::allocate
 mem::in::detour
