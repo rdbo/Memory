@@ -171,7 +171,7 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	std::stringstream ss;
 	ss << file.rdbuf();
 
-	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find(module_name.c_str(), 0)) + 1;
+	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find('\n', ss.str().find(module_name.c_str(), 0))) + 1;
 	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
 	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1) return modinfo;
 	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);

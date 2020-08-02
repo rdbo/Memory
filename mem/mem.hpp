@@ -93,9 +93,11 @@
 #if defined(MEM_UCS)
 #define MEM_STR(str) CONCAT_STR(L, str)
 #define MEM_STR_CMP(str1, str2) wcscmp(str1, str2)
+#define MEM_STR_N_CMP(str1, str2, n) wcsncmp(str1, str2, n)
 #elif defined(MEM_MBCS)
 #define MEM_STR(str) str
 #define MEM_STR_CMP(str1, str2) strcmp(str1, str2)
+#define MEM_STR_N_CMP(str1, str2, n) strncmp(str1, str2, n)
 #endif
 
 //Assembly
