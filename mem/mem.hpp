@@ -143,7 +143,7 @@
 //Compatibility
 
 #if (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
-#define MEM_COMPATIBLE (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
+#define MEM_COMPATIBLE
 #endif //MEM_COMPATIBLE
 
 #if defined(MEM_COMPATIBLE)
