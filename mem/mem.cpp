@@ -160,7 +160,7 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	modinfo.base = (voidptr_t)module_info.lpBaseOfDll;
 	modinfo.size = (size_t)module_info.SizeOfImage;
 	modinfo.end = (voidptr_t)((uintptr_t)modinfo.base + modinfo.size);
-	modinfo.handle = hMod;
+	modinfo.handle = (module_handle_t)hMod;
 	modinfo.path = modpath;
 
 #   elif defined(MEM_LINUX)
@@ -200,16 +200,22 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1 ||
+	module_handle_t handle = (module_handle_t)dlopen(module_path_str.c_str(), RTLD_LAZY);
+
+	if(
+		module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1   ||
 		base_address_pos == (std::size_t)-1 || base_address_end == (std::size_t)-1 ||
-		end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1 ||
-	  	module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1) return modinfo;
+		end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1   ||
+	  	module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1   ||
+		handle == (module_handle_t)MEM_BAD_RETURN
+	) return modinfo;
 
 	modinfo.name = module_name_str;
 	modinfo.base = (mem::voidptr_t)base_address;
 	modinfo.end  = (mem::voidptr_t)end_address;
 	modinfo.size = end_address - base_address;
 	modinfo.path = module_path_str;
+	modinfo.handle = handle;
 	ss.str("");
 	file.close();
 

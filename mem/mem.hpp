@@ -196,9 +196,11 @@ namespace mem
 #   if defined(MEM_WIN)
 	typedef uint32_t pid_t;
 	typedef uint32_t prot_t;
+	typedef HMODULE  module_handle_t;
 #   elif defined(MEM_LINUX)
 	typedef int32_t  pid_t;
 	typedef int32_t  prot_t;
+	typedef void*    module_handle_t;
 #   endif
 
 #   if defined(MEM_86)
@@ -222,16 +224,12 @@ namespace mem
 
 	typedef struct
 	{
-		string_t  name   = MEM_STR("");
-		string_t  path   = MEM_STR("");
-		voidptr_t base   = (voidptr_t)MEM_BAD_RETURN;
-		uintptr_t size   = (uintptr_t)MEM_BAD_RETURN;
-		voidptr_t end    = (voidptr_t)MEM_BAD_RETURN;
-#       if defined(MEM_WIN)
-		HMODULE   handle = (HMODULE)NULL;
-#       elif defined(MEM_LINUX)
-		void*     handle = (void*)NULL; //this should only be used internally on non-executable modules
-#       endif
+		string_t        name   = MEM_STR("");
+		string_t        path   = MEM_STR("");
+		voidptr_t       base   = (voidptr_t)MEM_BAD_RETURN;
+		uintptr_t       size   = (uintptr_t)MEM_BAD_RETURN;
+		voidptr_t       end    = (voidptr_t)MEM_BAD_RETURN;
+		module_handle_t handle = (module_handle_t)MEM_BAD_RETURN;
 	}module_t;
 
 	typedef struct
