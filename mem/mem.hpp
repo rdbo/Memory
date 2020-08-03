@@ -92,8 +92,12 @@
 #define CALC_ASM_LENGTH(...) CALC_ARG_LENGTH(__VA_ARGS__)
 #if defined(MEM_UCS)
 #define MEM_STR(str) CONCAT_STR(L, str)
+#define MEM_STR_CMP(str1, str2) wcscmp(str1, str2)
+#define MEM_STR_N_CMP(str1, str2, n) wcsncmp(str1, str2, n)
 #elif defined(MEM_MBCS)
 #define MEM_STR(str) str
+#define MEM_STR_CMP(str1, str2) strcmp(str1, str2)
+#define MEM_STR_N_CMP(str1, str2, n) strncmp(str1, str2, n)
 #endif
 
 //Assembly
@@ -139,7 +143,7 @@
 //Compatibility
 
 #if (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
-#define MEM_COMPATIBLE (defined(MEM_WIN) || defined(MEM_LINUX)) && (defined(MEM_86) || defined(MEM_64))
+#define MEM_COMPATIBLE
 #endif //MEM_COMPATIBLE
 
 #if defined(MEM_COMPATIBLE)
@@ -196,9 +200,11 @@ namespace mem
 #   if defined(MEM_WIN)
 	typedef uint32_t pid_t;
 	typedef uint32_t prot_t;
+	typedef HMODULE  module_handle_t;
 #   elif defined(MEM_LINUX)
 	typedef int32_t  pid_t;
 	typedef int32_t  prot_t;
+	typedef void*    module_handle_t;
 #   endif
 
 #   if defined(MEM_86)
@@ -220,47 +226,128 @@ namespace mem
 	typedef unsigned long             size_t;
 	typedef std::basic_string<char_t> string_t;
 
-	typedef struct
+	typedef class _module_t
 	{
-		string_t  name   = MEM_STR("");
-		string_t  path   = MEM_STR("");
-		voidptr_t base   = (voidptr_t)MEM_BAD_RETURN;
-		uintptr_t size   = (uintptr_t)MEM_BAD_RETURN;
-		voidptr_t end    = (voidptr_t)MEM_BAD_RETURN;
-#       if defined(MEM_WIN)
-		HMODULE   handle = (HMODULE)NULL;
-#       elif defined(MEM_LINUX)
-		void*     handle = (void*)NULL; //this should only be used internally on non-executable modules
-#       endif
+		public:
+		string_t        name   = MEM_STR("");
+		string_t        path   = MEM_STR("");
+		voidptr_t       base   = (voidptr_t)MEM_BAD_RETURN;
+		uintptr_t       size   = (uintptr_t)MEM_BAD_RETURN;
+		voidptr_t       end    = (voidptr_t)MEM_BAD_RETURN;
+		module_handle_t handle = (module_handle_t)MEM_BAD_RETURN;
+
+		public:
+		bool_t is_valid()
+		{
+			return (
+				MEM_STR_CMP(name.c_str(), MEM_STR("")) &&
+				MEM_STR_CMP(path.c_str(), MEM_STR("")) &&
+				base != (voidptr_t)MEM_BAD_RETURN      &&
+				size != (size_t)MEM_BAD_RETURN         &&
+				end  != (voidptr_t)MEM_BAD_RETURN
+			);
+		}
+
+		bool_t operator==(_module_t _mod)
+		{
+			return (bool_t)(
+			!MEM_STR_CMP(this->name.c_str(), _mod.name.c_str())   &&
+			!MEM_STR_CMP(this->path.c_str(), _mod.path.c_str())   &&
+			this->base   == _mod.base   &&
+			this->size   == _mod.size   &&
+			this->end    == _mod.end    &&
+			this->handle == _mod.handle
+			);
+		}
 	}module_t;
 
-	typedef struct
+	typedef class _process_t
 	{
+		public:
 		string_t name = MEM_STR("");
 		pid_t    pid = (pid_t)MEM_BAD_RETURN;
 #       if defined(MEM_WIN)
 		HANDLE handle = (HANDLE)NULL;
 #       elif defined(MEM_LINUX)
 #       endif
+		bool_t is_valid()
+		{
+			return (
+#				if defined(MEM_WIN)
+				handle != (HANDLE)NULL &&
+#				elif defined(MEM_LINUX)
+#				endif
+
+				MEM_STR_CMP(name.c_str(), "") &&
+				pid != MEM_BAD_RETURN
+			);
+		}
+
+		bool_t operator==(_process_t _process)
+		{
+			return (bool_t)(
+				!MEM_STR_CMP(this->name.c_str(), _process.name.c_str()) &&
+				this->pid == _process.pid
+			);
+		}
 	}process_t;
 
-	typedef struct
+	typedef class _alloc_t
 	{
+		public:
 		prot_t protection = (prot_t)NULL;
 #		if defined(MEM_WIN)
 		uint32_t type = MEM_RESERVE | MEM_COMMIT;
 #		elif defined(MEM_LINUX)
 		int32_t type = MAP_ANON | MAP_PRIVATE;
 #		endif
+		bool_t is_valid()
+		{
+			return (
+				protection  != (prot_t)NULL &&
+				(int32_t)type != (int_t)NULL
+			);
+		}
+
+		bool_t operator==(_alloc_t _allocation)
+		{
+			return (bool_t)(
+				this->protection == _allocation.protection &&
+				this->type       == _allocation.type
+			);
+		}
 	}alloc_t;
 
-	typedef struct
+	typedef class _lib_t
 	{
+		public:
 		string_t path = "";
 #		if defined(MEM_WIN)
 #		elif defined(MEM_LINUX)
 		int_t mode = (int_t)RTLD_LAZY;
 #		endif
+
+		bool_t is_valid()
+		{
+			return (bool_t)(
+#				if defined(MEM_WIN)
+#				elif defined(MEM_LINUX)
+				mode != (int_t)NULL &&
+#				endif
+				MEM_STR_CMP(path.c_str(), MEM_STR(""))
+			);
+		}
+
+		bool_t operator==(_lib_t _lib)
+		{
+			return (bool_t)(
+#				if defined(MEM_WIN)
+#				elif defined(MEM_LINUX)
+				this->mode == _lib.mode &&
+#				endif
+				MEM_STR_CMP(this->path.c_str(), _lib.path.c_str())
+			);
+		}
 	}lib_t;
 
 	enum class detour_int
