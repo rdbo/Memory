@@ -200,7 +200,9 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-	module_handle_t handle = (module_handle_t)dlopen(module_path_str.c_str(), RTLD_LAZY);
+	module_handle_t handle = NULL;
+	if(MEM_STR_CMP(process.name.c_str(), module_name_str.c_str()))
+		handle = (module_handle_t)dlopen(module_path_str.c_str(), RTLD_LAZY);
 
 	if(
 		module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1   ||
@@ -355,7 +357,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 	return pattern_scan(process, pattern, mask, base, (voidptr_t)((uintptr_t)base + size));
 }
 
-mem::int_t mem::ex::load_library(process_t process, lib_t libpath)
+mem::int_t mem::ex::load_library(process_t process, lib_t lib)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
 #	if defined(MEM_WIN)
