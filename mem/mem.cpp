@@ -171,10 +171,23 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	std::stringstream ss;
 	ss << file.rdbuf();
 
-	std::size_t module_name_pos = ss.str().rfind('/', ss.str().find('\n', ss.str().find(module_name.c_str(), 0))) + 1;
-	std::size_t module_name_end = ss.str().find('\n', module_name_pos);
-	if(module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1) return modinfo;
-	std::string module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
+	std::size_t module_name_pos = 0;
+	std::size_t module_name_end = 0;
+	std::size_t next = 0;
+	std::string module_name_str = "";
+	while((next = ss.str().find(module_name.c_str(), module_name_end)) != ss.str().npos && (module_name_pos = ss.str().find('/', next)))
+	{
+		module_name_end = ss.str().find('\n', module_name_pos);
+		module_name_pos = ss.str().rfind('/', module_name_end) + 1;
+		module_name_str = ss.str().substr(module_name_pos, module_name_end - module_name_pos);
+		if(module_name_str.length() >= module_name.length())
+		{
+			if(!MEM_STR_N_CMP(module_name_str.c_str(), module_name.c_str(), module_name.length()))
+				break;
+		}
+	}
+
+	if(module_name_pos == 0 || module_name_pos == -1 || module_name_pos == ss.str().npos || module_name_end == 0 || module_name_end == -1 || module_name_end == ss.str().npos) return modinfo;
 
 	std::size_t base_address_pos = ss.str().rfind('\n', ss.str().find(mem::string_t('/' + module_name_str + '\n').c_str(), 0)) + 1;
 	std:size_t base_address_end = ss.str().find('-', base_address_pos);
@@ -200,7 +213,7 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 	mem::uintptr_t end_address = strtoull(end_address_str.c_str(), NULL, 16);
 #   endif
 
-	module_handle_t handle = NULL;
+	module_handle_t handle = (module_handle_t)MEM_BAD_RETURN;
 	if(MEM_STR_CMP(process.name.c_str(), module_name_str.c_str()))
 		handle = (module_handle_t)dlopen(module_path_str.c_str(), RTLD_LAZY);
 
@@ -208,8 +221,7 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 		module_name_pos == (std::size_t)-1 || module_name_end == (std::size_t)-1   ||
 		base_address_pos == (std::size_t)-1 || base_address_end == (std::size_t)-1 ||
 		end_address_pos == (std::size_t)-1 || end_address_end == (std::size_t)-1   ||
-	  	module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1   ||
-		handle == (module_handle_t)MEM_BAD_RETURN
+	  	module_path_pos == (std::size_t)-1 || module_path_end == (std::size_t)-1
 	) return modinfo;
 
 	modinfo.name = module_name_str;
