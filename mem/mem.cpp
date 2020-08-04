@@ -150,6 +150,7 @@ mem::string_t mem::ex::get_process_name(pid_t pid)
 mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 {
 	module_t modinfo;
+	if(!process.is_valid()) return modinfo;
 #   if defined(MEM_WIN)
 	HMODULE hMod;
 	char_t modpath[MAX_PATH];
@@ -240,6 +241,7 @@ mem::module_t mem::ex::get_module(process_t process, string_t module_name)
 
 mem::bool_t mem::ex::is_process_running(process_t process)
 {
+	if(!process.is_valid()) return (bool_t)false;
 #   if defined(MEM_WIN)
 	DWORD exit_code;
 	GetExitCodeProcess(process.handle, &exit_code);
@@ -256,8 +258,10 @@ mem::bool_t mem::ex::is_process_running(process_t process)
 
 mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t size)
 {
+	int_t ret = (int_t)MEM_BAD_RETURN;
+	if(!process.is_valid()) return ret;
 #   if defined(MEM_WIN)
-	return (int_t)ReadProcessMemory(process.handle, (LPCVOID)src, (LPVOID)dst, (SIZE_T)size, NULL);
+	ret = (int_t)ReadProcessMemory(process.handle, (LPCVOID)src, (LPVOID)dst, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
 	struct iovec iosrc;
 	struct iovec iodst;
@@ -265,15 +269,17 @@ mem::int_t mem::ex::read(process_t process, voidptr_t src, voidptr_t dst, size_t
 	iodst.iov_len = size;
 	iosrc.iov_base = src;
 	iosrc.iov_len = size;
-	return process_vm_readv(process.pid, &iodst, 1, &iosrc, 1, 0);
+	ret = process_vm_readv(process.pid, &iodst, 1, &iosrc, 1, 0);
 #   endif
-	return MEM_BAD_RETURN;
+	return ret;
 }
 
 mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size_t size)
 {
+	int_t ret = (int_t)MEM_BAD_RETURN;
+	if(!process.is_valid()) return ret;
 #   if defined(MEM_WIN)
-	return (int_t)WriteProcessMemory(process.handle, (LPVOID)src, (LPCVOID)data, (SIZE_T)size, NULL);
+	ret = (int_t)WriteProcessMemory(process.handle, (LPVOID)src, (LPCVOID)data, (SIZE_T)size, NULL);
 #   elif defined(MEM_LINUX)
 	struct iovec iosrc;
 	struct iovec iodst;
@@ -281,16 +287,19 @@ mem::int_t mem::ex::write(process_t process, voidptr_t src, voidptr_t data, size
 	iosrc.iov_len = size;
 	iodst.iov_base = src;
 	iodst.iov_len = size;
-	return process_vm_writev(process.pid, &iosrc, 1, &iodst, 1, 0);
+	ret = process_vm_writev(process.pid, &iosrc, 1, &iodst, 1, 0);
 #   endif
-	return MEM_BAD_RETURN;
+	return ret;
 }
 
 mem::int_t mem::ex::set(process_t process, voidptr_t src, byte_t byte, size_t size)
 {
+	int_t ret = MEM_BAD_RETURN;
 	byte_t* data = new byte_t[size];
 	mem::in::set(data, byte, size);
-	return write(process, src, data, size);
+	ret = write(process, src, data, size);
+	delete[] data;
+	return ret;
 }
 
 mem::int_t mem::ex::protect(process_t process, voidptr_t src, size_t size, prot_t protection)
@@ -324,6 +333,7 @@ mem::voidptr_t mem::ex::allocate(process_t process, size_t size, alloc_t allocat
 mem::voidptr_t mem::ex::scan(process_t process, voidptr_t data, voidptr_t base, voidptr_t end, size_t size)
 {
 	voidptr_t ret = (voidptr_t)MEM_BAD_RETURN;
+	if(!process.is_valid()) return ret;
 	for(uintptr_t i = 0; (uintptr_t)base + i < (uintptr_t)end; i += size)
 	{
 		voidptr_t read_bytes = malloc(size);
@@ -343,6 +353,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 	mask = parse_mask(mask);
 	voidptr_t ret = (mem::voidptr_t)MEM_BAD_RETURN;
 	uintptr_t scan_size = (uintptr_t)end - (uintptr_t)base;
+	if(!process.is_valid()) return ret;
 
 	for (uintptr_t i = 0; i < scan_size; i++)
 	{
@@ -372,6 +383,7 @@ mem::voidptr_t mem::ex::pattern_scan(process_t process, bytearray_t pattern, str
 mem::int_t mem::ex::load_library(process_t process, lib_t lib)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
+	if(!lib.is_valid()) return ret;
 #	if defined(MEM_WIN)
 	if (lib.path.length() == 0 || process.handle == NULL) return ret;
 	size_t buffer_size = (size_t)((lib.path.length() + 1) * sizeof(char_t));
@@ -692,6 +704,7 @@ mem::voidptr_t mem::in::pattern_scan(bytearray_t pattern, string_t mask, voidptr
 mem::int_t mem::in::load_library(lib_t lib, module_t* mod)
 {
 	int_t ret = (int_t)MEM_BAD_RETURN;
+	if(!lib.is_valid()) return ret;
 #	if defined(MEM_WIN)
 	HMODULE h_mod = LoadLibrary(lib.path.c_str());
 	ret = (h_mod == NULL ? MEM_BAD_RETURN : !MEM_BAD_RETURN);

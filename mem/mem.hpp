@@ -201,10 +201,12 @@ namespace mem
 	typedef uint32_t pid_t;
 	typedef uint32_t prot_t;
 	typedef HMODULE  module_handle_t;
+	typedef uint32_t alloc_type_t;
 #   elif defined(MEM_LINUX)
 	typedef int32_t  pid_t;
 	typedef int32_t  prot_t;
 	typedef void*    module_handle_t;
+	typedef int32_t  alloc_type_t;
 #   endif
 
 #   if defined(MEM_86)
@@ -270,6 +272,8 @@ namespace mem
 		HANDLE handle = (HANDLE)NULL;
 #       elif defined(MEM_LINUX)
 #       endif
+
+		public:
 		bool_t is_valid()
 		{
 			return (
@@ -296,16 +300,14 @@ namespace mem
 	{
 		public:
 		prot_t protection = (prot_t)NULL;
-#		if defined(MEM_WIN)
-		uint32_t type = MEM_RESERVE | MEM_COMMIT;
-#		elif defined(MEM_LINUX)
-		int32_t type = MAP_ANON | MAP_PRIVATE;
-#		endif
+		alloc_type_t type = (alloc_type_t)NULL;
+
+		public:
 		bool_t is_valid()
 		{
 			return (
 				protection  != (prot_t)NULL &&
-				(int32_t)type != (int_t)NULL
+				type != (alloc_type_t)NULL
 			);
 		}
 
@@ -326,6 +328,8 @@ namespace mem
 #		elif defined(MEM_LINUX)
 		int_t mode = (int_t)RTLD_LAZY;
 #		endif
+
+		public:
 
 		bool_t is_valid()
 		{
