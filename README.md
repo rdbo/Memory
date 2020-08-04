@@ -45,8 +45,8 @@ mem::in::load_library
 
 # Projects
 Projects made with the Memory Lib:  
-![Counter-Strike 1.6 External Bunnyhop Hack](https://github.com/rdbo/cstrike-bhop-ex-linux)
-![Counter-Strike 1.6 Internal Bunnyhop Hack](https://github.com/rdbo/cstrike-bhop-in-linux)
+![Counter-Strike 1.6 External Bunnyhop Hack](https://github.com/rdbo/cstrike-bhop-ex-linux)  
+![Counter-Strike 1.6 Internal Bunnyhop Hack](https://github.com/rdbo/cstrike-bhop-in-linux)  
 
 # TODO
 ```
