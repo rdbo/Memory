@@ -2,6 +2,10 @@
 Memory Management on Windows/Linux  
 https://github.com/rdbo/Memory  
 
+# libmem
+C-Compatible version of this project, which is being more updated and has more features:
+https://github.com/rdbo/libmem
+
 # Usage
 Just copy the "mem" folder to your project, then include "mem/mem.hpp" and make sure to compile "mem/mem.cpp".  
 Check "docs/documentation.txt" for more guidance  
